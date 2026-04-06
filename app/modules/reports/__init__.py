@@ -5,7 +5,7 @@ from app.auth.decorators import require_auth, require_permission
 from app.config.constants import Permissions, AuditAction
 from app.repositories import (
     ReportRepository, ProcessOrderRepository, NPLResultRepository,
-    TargetWeightResultRepository,
+    TargetWeightResultRepository, NPLInputRepository, FGCodeRepository,
 )
 from app.services.report_generator import ReportGenerator
 from app.utils.helpers import paginate_args, flash_success, flash_error
@@ -139,3 +139,79 @@ def _flatten_for_excel(report_type: str, context: dict):
         return headers, data
 
     return ['Report'], [['No data']]
+
+
+@bp.route('/natural-loss')
+@require_auth
+@require_permission(Permissions.REPORT_VIEW)
+def natural_loss():
+    """Natural Loss % reports grouped by Blend GTIN and FG GTIN."""
+    po_repo = ProcessOrderRepository(g.db)
+    fg_repo = FGCodeRepository(g.db)
+    npl_repo = NPLResultRepository(g.db)
+    npl_input_repo = NPLInputRepository(g.db)
+
+    all_orders = po_repo.get_all()
+    po_ids = [o.id for o in all_orders]
+
+    # Build lookups - bulk fetch to avoid N+1 queries
+    fg_ids = list({o.fg_code_id for o in all_orders if o.fg_code_id})
+    fg_map = {fg.id: fg for fg in fg_repo.get_by_ids(fg_ids)}
+
+    npl_map = npl_repo.get_by_process_orders(po_ids)
+    npl_input_map = npl_input_repo.get_by_process_orders(po_ids)
+
+    # Aggregate by Blend GTIN and FG GTIN
+    blend_agg = {}
+    fg_agg = {}
+
+    for po in all_orders:
+        fg = fg_map.get(po.fg_code_id)
+        if not fg:
+            continue
+        npl_input = npl_input_map.get(po.id)
+        npl_result = npl_map.get(po.id)
+        if not npl_input or not npl_result:
+            continue
+
+        t_usd = float(npl_input.t_usd or 0)
+        l_dst = float(npl_input.l_dst or 0)
+        npl_kg = float(npl_result.npl_kg or 0)
+
+        # Blend GTIN aggregation
+        b_gtin = fg.blend_gtin or '-'
+        if b_gtin not in blend_agg:
+            blend_agg[b_gtin] = {'t_usd': 0, 'l_dst': 0, 'npl_kg': 0}
+        blend_agg[b_gtin]['t_usd'] += t_usd
+        blend_agg[b_gtin]['l_dst'] += l_dst
+        blend_agg[b_gtin]['npl_kg'] += npl_kg
+
+        # FG GTIN aggregation
+        f_gtin = fg.fg_gtin or '-'
+        if f_gtin not in fg_agg:
+            fg_agg[f_gtin] = {'t_usd': 0, 'l_dst': 0, 'npl_kg': 0}
+        fg_agg[f_gtin]['t_usd'] += t_usd
+        fg_agg[f_gtin]['l_dst'] += l_dst
+        fg_agg[f_gtin]['npl_kg'] += npl_kg
+
+    def _build_rows(agg):
+        rows = []
+        for gtin, vals in sorted(agg.items()):
+            t = vals['t_usd']
+            dust_pct = (vals['l_dst'] / t * 100) if t else 0
+            moist_pct = (vals['npl_kg'] / t * 100) if t else 0
+            rows.append({
+                'gtin': gtin,
+                't_usd': vals['t_usd'],
+                'l_dst': vals['l_dst'],
+                'npl_kg': vals['npl_kg'],
+                'dust_pct': dust_pct,
+                'moist_pct': moist_pct,
+            })
+        return rows
+
+    blend_rows = _build_rows(blend_agg)
+    fg_rows = _build_rows(fg_agg)
+
+    return render_template('reports/natural_loss.html',
+                           blend_rows=blend_rows, fg_rows=fg_rows)

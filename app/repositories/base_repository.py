@@ -43,6 +43,17 @@ class BaseRepository(Generic[T]):
         q = self._base_query(filters)
         return q.all()
 
+    def get_by_ids(self, entity_ids: List[str]) -> List[T]:
+        """Fetch multiple records by primary keys in a single query."""
+        if not entity_ids:
+            return []
+        q = self.session.query(self.model_class).filter(
+            self.model_class.id.in_(entity_ids)
+        )
+        if hasattr(self.model_class, 'is_deleted'):
+            q = q.filter(self.model_class.is_deleted == False)  # noqa: E712
+        return q.all()
+
     def get_paginated(
         self,
         page: int = 1,

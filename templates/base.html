@@ -162,11 +162,26 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.blueprint == 'reports' %}active{% endif %}"
-                            href="{{ url_for('reports.index') }}">
+                        <a class="nav-link nav-sub-toggle {% if request.blueprint == 'reports' %}active{% endif %}"
+                            data-bs-toggle="collapse" data-bs-target="#reportsSub"
+                            aria-expanded="{% if request.blueprint == 'reports' %}true{% else %}false{% endif %}"
+                            role="button">
                             <i class="bi bi-file-earmark-pdf"></i>
                             <span>Reports</span>
+                            <i class="bi bi-chevron-right chevron"></i>
                         </a>
+                        <div class="collapse {% if request.blueprint == 'reports' %}show{% endif %}" id="reportsSub">
+                            <ul class="nav flex-column sub-nav">
+                                <li class="nav-item"><a
+                                        class="nav-link {% if request.endpoint == 'reports.index' %}active{% endif %}"
+                                        href="{{ url_for('reports.index') }}"><i class="bi bi-list-ul"></i><span>All
+                                            Reports</span></a></li>
+                                <li class="nav-item"><a
+                                        class="nav-link {% if request.endpoint == 'reports.natural_loss' %}active{% endif %}"
+                                        href="{{ url_for('reports.natural_loss') }}"><i
+                                            class="bi bi-bar-chart-line"></i><span>Natural Loss %</span></a></li>
+                            </ul>
+                        </div>
                     </li>
                     <li class="nav-section">SYSTEM</li>
                     <li class="nav-item">

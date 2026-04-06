@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Natural Loss Reports{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('reports.index') }}">Reports</a>
+<span class="separator">/</span>
+<span class="current">Natural Loss %</span>
+{% endblock %}
+
+{% block content %}
+<style>
+    .nl-table-wrap {
+        overflow: auto;
+        border: 1px solid #b4c9a8;
+        border-radius: 4px;
+        background: #fff;
+        margin-bottom: 24px;
+    }
+
+    .nl-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+        font-size: 0.8rem;
+    }
+
+    .nl-table thead th {
+        background: #4472c4;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.75rem;
+        padding: 6px 10px;
+        border: 1px solid #3b63a8;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .nl-table tbody td {
+        padding: 4px 10px;
+        border: 1px solid #d4d4d4;
+        white-space: nowrap;
+    }
+
+    .nl-table tbody tr:nth-child(even) td {
+        background: #f2f2f2;
+    }
+
+    .nl-table tbody tr:hover td {
+        background: #dce6f1;
+    }
+
+    .nl-table .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .nl-table .center {
+        text-align: center;
+    }
+
+    .nl-table tfoot td {
+        background: #d6dce4;
+        font-weight: 700;
+        padding: 6px 10px;
+        border: 1px solid #b4b4b4;
+    }
+
+    .nl-title {
+        background: #4472c4;
+        color: #fff;
+        padding: 8px 14px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-radius: 4px 4px 0 0;
+        margin-bottom: 0;
+    }
+
+    .report-section {
+        margin-bottom: 32px;
+    }
+
+    .tab-btns {
+        display: flex;
+        gap: 0;
+        margin-bottom: 0;
+    }
+
+    .tab-btns .tab-btn {
+        padding: 8px 24px;
+        font-weight: 600;
+        font-size: 0.82rem;
+        border: 1px solid #b4c9a8;
+        border-bottom: none;
+        background: #e8f0e4;
+        color: #1f4e25;
+        cursor: pointer;
+        border-radius: 6px 6px 0 0;
+        transition: background .15s;
+    }
+
+    .tab-btns .tab-btn.active {
+        background: #fff;
+        border-bottom: 1px solid #fff;
+        margin-bottom: -1px;
+        z-index: 1;
+        position: relative;
+    }
+
+    .tab-btns .tab-btn:hover:not(.active) {
+        background: #d4e4c8;
+    }
+
+    .tab-panel {
+        display: none;
+        border: 1px solid #b4c9a8;
+        border-radius: 0 4px 4px 4px;
+        padding: 16px;
+        background: #fff;
+    }
+
+    .tab-panel.active {
+        display: block;
+    }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-bar-chart-line"></i> Natural Loss % at Production Site</h2>
+    <a href="{{ url_for('reports.index') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+{# ── Tab Navigation ── #}
+<div class="tab-btns">
+    <button class="tab-btn active" onclick="switchNLTab('blend')">By Blend GTIN</button>
+    <button class="tab-btn" onclick="switchNLTab('fg')">By FG GTIN</button>
+</div>
+
+{# ── Tab 1: Blend GTIN ── #}
+<div class="tab-panel active" id="tab-blend">
+    <div class="nl-title">1. Natural Loss % at Production Site – Calculated as Moisture (by Blend GTIN)</div>
+    <div class="nl-table-wrap">
+        <table class="nl-table">
+            <thead>
+                <tr>
+                    <th>SL No</th>
+                    <th>GTIN</th>
+                    <th>Tobacco Used</th>
+                    <th>Dust &amp; Stems / kg</th>
+                    <th>Moisture / kg</th>
+                    <th>Dust &amp; Stems %</th>
+                    <th>Moisture %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in blend_rows %}
+                <tr>
+                    <td class="center">{{ loop.index }}</td>
+                    <td>{{ r.gtin }}</td>
+                    <td class="num">{{ '%.3f'|format(r.t_usd) }}</td>
+                    <td class="num">{{ '%.3f'|format(r.l_dst) }}</td>
+                    <td class="num">{{ '%.4f'|format(r.npl_kg) }}</td>
+                    <td class="num">{{ '%.2f'|format(r.dust_pct) }}%</td>
+                    <td class="num">{{ '%.4f'|format(r.moist_pct) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if blend_rows %}
+            <tfoot>
+                <tr>
+                    <td colspan="2" class="center"><strong>Grand Total</strong></td>
+                    <td class="num">{{ '%.2f'|format(blend_rows|sum(attribute='t_usd')) }}</td>
+                    <td class="num">{{ '%.2f'|format(blend_rows|sum(attribute='l_dst')) }}</td>
+                    <td class="num">{{ '%.2f'|format(blend_rows|sum(attribute='npl_kg')) }}</td>
+                    <td class="num"></td>
+                    <td class="num"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    {% if not blend_rows %}
+    <p class="text-muted text-center py-4">No NPL data available for Blend GTIN aggregation.</p>
+    {% endif %}
+</div>
+
+{# ── Tab 2: FG GTIN ── #}
+<div class="tab-panel" id="tab-fg">
+    <div class="nl-title">2. Natural Loss % at Production Site – Calculated as Moisture (by FG GTIN)</div>
+    <div class="nl-table-wrap">
+        <table class="nl-table">
+            <thead>
+                <tr>
+                    <th>SL No</th>
+                    <th>GTIN</th>
+                    <th>Tobacco Used</th>
+                    <th>Dust &amp; Stems / kg</th>
+                    <th>Moisture / kg</th>
+                    <th>Dust &amp; Stems %</th>
+                    <th>Moisture %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in fg_rows %}
+                <tr>
+                    <td class="center">{{ loop.index }}</td>
+                    <td>{{ r.gtin }}</td>
+                    <td class="num">{{ '%.3f'|format(r.t_usd) }}</td>
+                    <td class="num">{{ '%.3f'|format(r.l_dst) }}</td>
+                    <td class="num">{{ '%.4f'|format(r.npl_kg) }}</td>
+                    <td class="num">{{ '%.2f'|format(r.dust_pct) }}%</td>
+                    <td class="num">{{ '%.4f'|format(r.moist_pct) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if fg_rows %}
+            <tfoot>
+                <tr>
+                    <td colspan="2" class="center"><strong>Grand Total</strong></td>
+                    <td class="num">{{ '%.2f'|format(fg_rows|sum(attribute='t_usd')) }}</td>
+                    <td class="num">{{ '%.2f'|format(fg_rows|sum(attribute='l_dst')) }}</td>
+                    <td class="num">{{ '%.2f'|format(fg_rows|sum(attribute='npl_kg')) }}</td>
+                    <td class="num"></td>
+                    <td class="num"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    {% if not fg_rows %}
+    <p class="text-muted text-center py-4">No NPL data available for FG GTIN aggregation.</p>
+    {% endif %}
+</div>
+
+<script>
+    function switchNLTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+        document.getElementById('tab-' + tab).classList.add('active');
+        event.target.classList.add('active');
+    }
+</script>
+{% endblock %}
