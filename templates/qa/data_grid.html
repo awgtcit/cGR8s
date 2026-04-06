@@ -2,7 +2,7 @@
 {% block title %}Data Grid{% endblock %}
 
 {# ══════════════════════════════════════════════════════════════════
-Macro: QA Analysis grid – 38 editable columns
+Macro: QA Analysis grid – 42 columns (5 new QA measurement columns)
 ══════════════════════════════════════════════════════════════════ #}
 {% macro qa_grid(grid_id, rows) %}
 <thead>
@@ -11,7 +11,10 @@ Macro: QA Analysis grid – 38 editable columns
         'SKU','SKU Desc','SKU GTN','Blend Code','Blend Desc','Blend GTIN','Cig. Code','UID',
         'Pack OV','Lamina CPI','Filling Power','Filling Power Corr','Maker Moisture','SSI',
         'PAN%','Total Cig. Length','Circumference Mean','Circumference SD','Cig Dia',
-        'TIP VF','TIP Vf SD','Filter PD Mean','W_NTM','Plug Wrap CU','TOW',
+        'Tobacco Wt Mean','Tobacco Wt SD',
+        'TIP VF','TIP Vf SD','Filter PD Mean','Filter Weight',
+        'Plug Wrap CU','TOW',
+        'Cig. Wt. Mean','Cig. Wt. SD',
         'Cig PDO','Cig. Hardness','Cig. Corr. Hardness','Loose Shorts','Plug Length',
         'MC','Company','Status'] %}
         {% for col in cols %}
@@ -19,7 +22,7 @@ Macro: QA Analysis grid – 38 editable columns
         {% endfor %}
     </tr>
     <tr>
-        {% for i in range(38) %}
+        {% for i in range(cols|length) %}
         <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter...{% endif %}"
                 oninput="colFilter('{{ grid_id }}',{{ i }},this.value)">
         </th>
@@ -70,46 +73,55 @@ Macro: QA Analysis grid – 38 editable columns
                 value="{{ '%.4f'|format(src.circumference_sd) if src and src.circumference_sd else '' }}"></td>
         <td class="num ed"><input type="text" class="cell-input" data-field="cig_dia" data-col="23"
                 value="{{ '%.3f'|format(src.cig_dia) if src and src.cig_dia else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="tip_vf" data-col="24"
+        <td class="num ed"><input type="text" class="cell-input" data-field="tobacco_weight_mean" data-col="24"
+                value="{{ '%.3f'|format(src.tobacco_weight_mean) if src and src.tobacco_weight_mean else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="tobacco_weight_sd" data-col="25"
+                value="{{ '%.4f'|format(src.tobacco_weight_sd) if src and src.tobacco_weight_sd else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="tip_vf" data-col="26"
                 value="{{ '%.2f'|format(src.tip_vf) if src and src.tip_vf else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="tip_vf_sd" data-col="25"
+        <td class="num ed"><input type="text" class="cell-input" data-field="tip_vf_sd" data-col="27"
                 value="{{ '%.4f'|format(src.tip_vf_sd) if src and src.tip_vf_sd else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="filter_pd_mean" data-col="26"
+        <td class="num ed"><input type="text" class="cell-input" data-field="filter_pd_mean" data-col="28"
                 value="{{ '%.3f'|format(src.filter_pd_mean) if src and src.filter_pd_mean else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="w_ntm" data-col="27"
-                value="{{ '%.4f'|format(src.w_ntm) if src and src.w_ntm else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="plug_wrap_cu" data-col="28"
+        <td class="num ed"><input type="text" class="cell-input" data-field="filter_weight" data-col="29"
+                value="{{ '%.4f'|format(src.filter_weight) if src and src.filter_weight else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="plug_wrap_cu" data-col="30"
                 value="{{ '%.2f'|format(src.plug_wrap_cu) if src and src.plug_wrap_cu else '' }}"></td>
-        <td class="ed"><input type="text" class="cell-input" data-field="tow" data-col="29"
+        <td class="ed"><input type="text" class="cell-input" data-field="tow" data-col="31"
                 value="{{ src.tow if src and src.tow else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="cig_pdo" data-col="30"
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_wt_mean" data-col="32"
+                value="{{ '%.3f'|format(src.cig_wt_mean) if src and src.cig_wt_mean else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_wt_sd" data-col="33"
+                value="{{ '%.4f'|format(src.cig_wt_sd) if src and src.cig_wt_sd else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_pdo" data-col="34"
                 value="{{ '%.3f'|format(src.cig_pdo) if src and src.cig_pdo else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="cig_hardness" data-col="31"
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_hardness" data-col="35"
                 value="{{ '%.3f'|format(src.cig_hardness) if src and src.cig_hardness else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="cig_corr_hardness" data-col="32"
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_corr_hardness" data-col="36"
                 value="{{ '%.3f'|format(src.cig_corr_hardness) if src and src.cig_corr_hardness else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="loose_shorts" data-col="33"
+        <td class="num ed"><input type="text" class="cell-input" data-field="loose_shorts" data-col="37"
                 value="{{ '%.2f'|format(src.loose_shorts) if src and src.loose_shorts else '' }}"></td>
-        <td class="num ed"><input type="text" class="cell-input" data-field="plug_length" data-col="34"
+        <td class="num ed"><input type="text" class="cell-input" data-field="plug_length" data-col="38"
                 value="{{ '%.3f'|format(src.plug_length) if src and src.plug_length else '' }}"></td>
-        <td class="ed"><input type="text" class="cell-input" data-field="mc" data-col="35"
+        <td class="ed"><input type="text" class="cell-input" data-field="mc" data-col="39"
                 value="{{ src.mc if src and src.mc else '' }}"></td>
-        <td class="ed"><input type="text" class="cell-input" data-field="company" data-col="36"
+        <td class="ed"><input type="text" class="cell-input" data-field="company" data-col="40"
                 value="{{ src.company if src and src.company else '' }}"></td>
         <td>{{ r.qa.status if r.qa else 'Not entered' }}</td>
     </tr>
     {% else %}
     <tr>
-        <td colspan="38" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No QA data</td>
+        <td colspan="{{ cols|length }}" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No QA data
+        </td>
     </tr>
     {% endfor %}
 </tbody>
 {% endmacro %}
 
 {# ══════════════════════════════════════════════════════════════════
-Macro: Production Data grid – 88 read-only columns (A-CJ)
+Macro: Production Data grid – read-only columns (A-CJ)
 Reference | Key Vars | Constants | NC/NT | NTM/TW | NPL Input |
-TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Metadata
+TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Status
 ══════════════════════════════════════════════════════════════════ #}
 {% macro production_grid(grid_id, rows) %}
 <thead>
@@ -124,10 +136,15 @@ TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Metadata
         'W DRY','W TOB','W CIG',
         'TAC','TTC','NPL%','NPL KG',
         'FG+Blend',
-        'Pack OV','Status','Next Row#','Revised Weight',
-        'N_BLD','P_CU','V_F','F_PD','M_IP',
-        'S1','S2','TD','F','NS1','NS2','NTD','NF','NTDRY',
-        'W DRY','W TOB','W CIG','Stage No','NPL'] %}
+        'Pack OV','Lamina CPI','Filling Power','Filling Power Corr','Maker Moisture','SSI',
+        'PAN%','Total Cig. Length','Circumference Mean','Circumference SD','Cig Dia',
+        'Tobacco Weight Mean','Tobacco Weight SD',
+        'TIP VF','TIP VF SD','Filter PD Mean','Filter Weight',
+        'Plug Wrap CU','TOW',
+        'Cig. Wt. Mean','Cig. Wt. SD',
+        'Cig PDO','Cig. Hardness','Cig. Corr. Hardness',
+        'Loose Shorts','Plug Length',
+        'MC','Company','Status'] %}
         {% for col in cols %}
         <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
         {% endfor %}
@@ -221,48 +238,50 @@ TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Metadata
         <td class="num">{{ '%.2f'|format(r.npl.npl_kg) if r.npl and r.npl.npl_kg is not none else '–' }}</td>
         {# ── FG+Blend (1) ── #}
         <td>{{ (r.fg.fg_code ~ ', ' ~ r.fg.blend_code) if r.fg and r.fg.fg_code and r.fg.blend_code else '–' }}</td>
-        {# ── Pack OV + Status (2) ── #}
+        {# ── Pack OV + QA Measurements (29 cols) ── #}
         <td class="num">{{ '%.2f'|format(r.qa.pack_ov) if r.qa and r.qa.pack_ov is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.lamina_cpi) if r.qa and r.qa.lamina_cpi is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.filling_power) if r.qa and r.qa.filling_power is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.filling_power_corr) if r.qa and r.qa.filling_power_corr is not none else
+            '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.maker_moisture) if r.qa and r.qa.maker_moisture is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.2f'|format(r.qa.ssi) if r.qa and r.qa.ssi is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.pan_pct) if r.qa and r.qa.pan_pct is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.total_cig_length) if r.qa and r.qa.total_cig_length is not none else '–'
+            }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.circumference_mean) if r.qa and r.qa.circumference_mean is not none else
+            '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.circumference_sd) if r.qa and r.qa.circumference_sd is not none else '–'
+            }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.cig_dia) if r.qa and r.qa.cig_dia is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.tobacco_weight_mean) if r.qa and r.qa.tobacco_weight_mean is not none else
+            '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.tobacco_weight_sd) if r.qa and r.qa.tobacco_weight_sd is not none else '–'
+            }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.tip_vf) if r.qa and r.qa.tip_vf is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.tip_vf_sd) if r.qa and r.qa.tip_vf_sd is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.filter_pd_mean) if r.qa and r.qa.filter_pd_mean is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.2f'|format(r.qa.filter_weight) if r.qa and r.qa.filter_weight is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.plug_wrap_cu) if r.qa and r.qa.plug_wrap_cu is not none else '–' }}</td>
+        <td>{{ r.qa.tow if r.qa and r.qa.tow else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.cig_wt_mean) if r.qa and r.qa.cig_wt_mean is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.cig_wt_sd) if r.qa and r.qa.cig_wt_sd is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.cig_pdo) if r.qa and r.qa.cig_pdo is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.cig_hardness) if r.qa and r.qa.cig_hardness is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.cig_corr_hardness) if r.qa and r.qa.cig_corr_hardness is not none else '–'
+            }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.loose_shorts) if r.qa and r.qa.loose_shorts is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.qa.plug_length) if r.qa and r.qa.plug_length is not none else '–' }}</td>
+        <td>{{ r.qa.mc if r.qa and r.qa.mc else '–' }}</td>
+        <td>{{ r.qa.company if r.qa and r.qa.company else '–' }}</td>
         <td>{{ r.po.status }}</td>
-        {# ── Next Row# + Revised Weight (2) ── #}
-        <td class="num">{{ loop.index }}</td>
-        <td class="num">{{ '%.2f'|format(r.tw.tw) if r.tw and r.tw.tw is not none else '–' }}</td>
-        {# ── Repeated Key Vars (5) ── #}
-        <td class="num">{{ '%.4f'|format(r.tw.input_n_bld) if r.tw and r.tw.input_n_bld is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.input_p_cu) if r.tw and r.tw.input_p_cu is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.input_t_vnt) if r.tw and r.tw.input_t_vnt is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.input_f_pd) if r.tw and r.tw.input_f_pd is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.input_m_ip) if r.tw and r.tw.input_m_ip is not none else '–' }}</td>
-        {# ── Repeated TW Results (9) ── #}
-        <td class="num">{{ '%.4f'|format(r.tw.stage1_dilution) if r.tw and r.tw.stage1_dilution is not none else '–' }}
-        </td>
-        <td class="num">{{ '%.4f'|format(r.tw.stage2_dilution) if r.tw and r.tw.stage2_dilution is not none else '–' }}
-        </td>
-        <td class="num">{{ '%.4f'|format(r.tw.total_dilution) if r.tw and r.tw.total_dilution is not none else '–' }}
-        </td>
-        <td class="num">{{ '%.4f'|format(r.tw.filtration_pct) if r.tw and r.tw.filtration_pct is not none else '–' }}
-        </td>
-        <td class="num">{{ '%.4f'|format(r.tw.stage1_pacifying_nicotine_demand) if r.tw and
-            r.tw.stage1_pacifying_nicotine_demand is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.stage2_pacifying_nicotine_demand) if r.tw and
-            r.tw.stage2_pacifying_nicotine_demand is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.total_pacifying_nicotine_demand) if r.tw and
-            r.tw.total_pacifying_nicotine_demand is not none else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.total_filtration_pct) if r.tw and r.tw.total_filtration_pct is not none
-            else '–' }}</td>
-        <td class="num">{{ '%.4f'|format(r.tw.total_nicotine_demand) if r.tw and r.tw.total_nicotine_demand is not none
-            else '–' }}</td>
-        {# ── Repeated TW Output (3) ── #}
-        <td class="num">{{ '%.2f'|format(r.tw.w_dry) if r.tw and r.tw.w_dry is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.tw.w_tob) if r.tw and r.tw.w_tob is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.tw.w_cig) if r.tw and r.tw.w_cig is not none else '–' }}</td>
-        {# ── Stage No + NPL (2) ── #}
-        <td class="num">–</td>
-        <td class="num">{{ '%.2f'|format(r.npl.npl_pct) if r.npl and r.npl.npl_pct is not none else '–' }}</td>
     </tr>
     {% else %}
     <tr>
-        <td colspan="82" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No production data</td>
+        <td colspan="{{ cols|length }}" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No production
+            data</td>
     </tr>
     {% endfor %}
 </tbody>
@@ -1033,7 +1052,9 @@ Column AA = TP (instead of TISS).
     const EDIT_FIELDS = [
         'pack_ov', 'lamina_cpi', 'filling_power', 'filling_power_corr', 'maker_moisture', 'ssi',
         'pan_pct', 'total_cig_length', 'circumference_mean', 'circumference_sd', 'cig_dia',
-        'tip_vf', 'tip_vf_sd', 'filter_pd_mean', 'w_ntm', 'plug_wrap_cu', 'tow',
+        'tobacco_weight_mean', 'tobacco_weight_sd',
+        'tip_vf', 'tip_vf_sd', 'filter_pd_mean', 'filter_weight', 'plug_wrap_cu', 'tow',
+        'cig_wt_mean', 'cig_wt_sd',
         'cig_pdo', 'cig_hardness', 'cig_corr_hardness', 'loose_shorts', 'plug_length',
         'mc', 'company'
     ];
@@ -1191,9 +1212,9 @@ Column AA = TP (instead of TISS).
             if (!hasDirty) return;
 
             dirtyCount++;
-            // Build a 38-element array matching the grid column order
+            // Build a 42-element array matching the grid column order
             // cols 0-12 are read-only reference cols, col 4 = PO number (key)
-            const row = new Array(38).fill('');
+            const row = new Array(42).fill('');
             row[4] = poNumber; // Process Order number is the match key
 
             // Use data-col attribute to map each input to the correct column index
@@ -1258,7 +1279,10 @@ Column AA = TP (instead of TISS).
         'SKU', 'SKU Desc', 'SKU GTN', 'Blend Code', 'Blend Desc', 'Blend GTIN', 'Cig. Code', 'UID',
         'Pack OV', 'Lamina CPI', 'Filling Power', 'FP Corr', 'Maker Moist', 'SSI',
         'PAN%', 'Cig Length', 'Circ Mean', 'Circ SD', 'Cig Dia',
-        'TIP VF', 'TIP Vf SD', 'Filter PD', 'W_NTM', 'Plug Wrap CU', 'TOW',
+        'Tob Wt Mean', 'Tob Wt SD',
+        'TIP VF', 'TIP Vf SD', 'Filter PD', 'Filter Weight',
+        'Plug Wrap CU', 'TOW',
+        'Cig Wt Mean', 'Cig Wt SD',
         'Cig PDO', 'Cig Hard', 'Cig Corr Hard', 'Loose Shorts', 'Plug Length',
         'MC', 'Company', 'Status'];
 
@@ -1311,7 +1335,7 @@ Column AA = TP (instead of TISS).
         }
 
         // Build preview table (show first 20 rows max, limited columns)
-        const showCols = [4, 1, 3, 13, 20, 31, 35, 36]; // PO, QR Date, NPL Date, Pack OV, Cig Length, Hardness, MC, Company
+        const showCols = [4, 1, 3, 13, 20, 35, 39, 40]; // PO, QR Date, NPL Date, Pack OV, Cig Length, Hardness, MC, Company
         const showHeaders = showCols.map(i => COL_HEADERS[i] || `Col ${i}`);
         let html = '<table class="table table-sm table-bordered mb-0"><thead><tr>';
         html += '<th>#</th>';

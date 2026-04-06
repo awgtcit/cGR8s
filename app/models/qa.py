@@ -50,12 +50,17 @@ class QAAnalysis(Base, AuditMixin, VersionMixin):
     circumference_mean = Column(Float, nullable=True)  # Col V: Circumference Mean
     circumference_sd = Column(Float, nullable=True)  # Col W: Circumference SD
     cig_dia = Column(Float, nullable=True)           # Col X: Cig Dia
+    tobacco_weight_mean = Column(Float, nullable=True)  # Col Y: Tobacco Weight Mean
+    tobacco_weight_sd = Column(Float, nullable=True)  # Col Z: Tobacco Weight SD
     tip_vf = Column(Float, nullable=True)            # Col AA: TIP VF
     tip_vf_sd = Column(Float, nullable=True)         # Col AB: TIP Vf SD
     filter_pd_mean = Column(Float, nullable=True)    # Col AC: Filter PD Mean
-    w_ntm = Column(Float, nullable=True)             # Col AD: W_NTM (was Filter Weight)
+    filter_weight = Column(Float, nullable=True)     # Col AD: Filter Weight
+    w_ntm = Column(Float, nullable=True)             # Col AD alt: W_NTM (legacy alias)
     plug_wrap_cu = Column(Float, nullable=True)      # Col AE: Plug Wrap CU
     tow = Column(String(100), nullable=True)         # Col AF: TOW
+    cig_wt_mean = Column(Float, nullable=True)       # Col AG: Cig. Wt. Mean
+    cig_wt_sd = Column(Float, nullable=True)         # Col AH: Cig. Wt. SD
     cig_pdo = Column(Float, nullable=True)           # Col AI: Cig PDO
     cig_hardness = Column(Float, nullable=True)      # Col AJ: Cig. Hardness
     cig_corr_hardness = Column(Float, nullable=True)  # Col AK: Cig. Corr. Hardness

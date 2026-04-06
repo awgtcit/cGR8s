@@ -30,6 +30,16 @@ def _get_mc_options(db):
     ]
 
 
+def _get_prev_qa_map(rows, qa_repo):
+    """Return a map of fg_code_id -> latest QA for rows missing QA data."""
+    no_qa_fg_ids = list({r['po'].fg_code_id for r in rows
+                         if not r['qa'] and r['po'].fg_code_id})
+    if not no_qa_fg_ids:
+        return {}
+    no_qa_po_ids = [r['po'].id for r in rows if not r['qa']]
+    return qa_repo.get_latest_by_fg_code_ids(no_qa_fg_ids, exclude_po_ids=no_qa_po_ids)
+
+
 @bp.route('/')
 @require_auth
 @require_permission(Permissions.QA_VIEW)
@@ -298,14 +308,10 @@ def data_grid():
         rows.append(row)
 
     # ── Auto-fill: for rows without QA, get latest QA from previous production with same FG ──
-    no_qa_fg_ids = list({r['po'].fg_code_id for r in rows
-                         if not r['qa'] and r['po'].fg_code_id})
-    if no_qa_fg_ids:
-        no_qa_po_ids = [r['po'].id for r in rows if not r['qa']]
-        prev_qa_map = qa_repo.get_latest_by_fg_code_ids(no_qa_fg_ids, exclude_po_ids=no_qa_po_ids)
-        for r in rows:
-            if not r['qa'] and r['po'].fg_code_id and r['po'].fg_code_id in prev_qa_map:
-                r['prev_qa'] = prev_qa_map[r['po'].fg_code_id]
+    prev_qa_map = _get_prev_qa_map(rows, qa_repo)
+    for r in rows:
+        if not r['qa'] and r['po'].fg_code_id and r['po'].fg_code_id in prev_qa_map:
+            r['prev_qa'] = prev_qa_map[r['po'].fg_code_id]
 
     # MC and Company options for the paste modal dropdowns
     mc_options = _get_mc_options(g.db)
@@ -369,6 +375,12 @@ def export_excel():
             'qr_date': qr_date, 'npl_date': npl_date, 'uid': uid,
         })
 
+    # ── Auto-fill: for rows without QA, get latest QA from previous production with same FG ──
+    prev_qa_map = _get_prev_qa_map(rows, qa_repo)
+    for r in rows:
+        if not r['qa'] and r['po'].fg_code_id and r['po'].fg_code_id in prev_qa_map:
+            r['prev_qa'] = prev_qa_map[r['po'].fg_code_id]
+
     # ── Build Excel workbook ──
     wb = openpyxl.Workbook()
     header_font = Font(bold=True, size=9)
@@ -409,7 +421,7 @@ def export_excel():
             ws.column_dimensions[openpyxl.utils.get_column_letter(ci)].width = max(len(str(h)) + 2, 10)
         ws.freeze_panes = 'A2'
 
-    # ── Sheet 1: Production Data (109 columns: A-DE) ──
+    # ── Sheet 1: Production Data ──
     ws_prod = wb.active
     ws_prod.title = 'Production Data'
     prod_headers = [
@@ -423,14 +435,21 @@ def export_excel():
         'W DRY', 'W TOB', 'W CIG',
         'TAC', 'TTC', 'NPL%', 'NPL KG',
         'FG+Blend',
-        'Pack OV', 'Status', 'Next Row#', 'Revised Weight',
-        'N_BLD', 'P_CU', 'V_F', 'F_PD', 'M_IP',
-        'S1', 'S2', 'TD', 'F', 'NS1', 'NS2', 'NTD', 'NF', 'NTDRY',
-        'W DRY', 'W TOB', 'W CIG', 'Stage No', 'NPL',
+        'Pack OV',
+        'Lamina CPI', 'Filling Power', 'Filling Power Corr', 'Maker Moisture', 'SSI',
+        'PAN%', 'Total Cig. Length', 'Circumference Mean', 'Circumference SD', 'Cig Dia',
+        'Tobacco Weight Mean', 'Tobacco Weight SD',
+        'TIP VF', 'TIP VF SD', 'Filter PD Mean', 'Filter Weight',
+        'Plug Wrap CU', 'TOW',
+        'Cig. Wt. Mean', 'Cig. Wt. SD',
+        'Cig PDO', 'Cig. Hardness', 'Cig. Corr. Hardness',
+        'Loose Shorts', 'Plug Length',
+        'MC', 'Company', 'Status',
     ]
 
     def prod_row(r, idx):
-        po, fg, tw, npl, ni, qa = r['po'], r['fg'], r['tw'], r['npl'], r['npl_input'], r['qa']
+        po, fg, tw, npl, ni = r['po'], r['fg'], r['tw'], r['npl'], r['npl_input']
+        qa = r['qa'] or r.get('prev_qa')
         fg_blend = f"{fg.fg_code}, {fg.blend_code}" if fg and fg.fg_code and fg.blend_code else (fg.fg_code if fg else '')
         return [
             idx,  # RID
@@ -466,22 +485,21 @@ def export_excel():
             _v(npl, 'tac', 2), _v(npl, 'ttc', 2), _v(npl, 'npl_pct', 2), _v(npl, 'npl_kg', 2),
             # FG+Blend
             fg_blend,
-            # Pack OV + Status + Next Row# + Revised Weight
-            _v(qa, 'pack_ov', 2), po.status or '', idx, _v(tw, 'tw', 2),
-            # Repeated Key Vars (5)
-            _v(tw, 'input_n_bld', 4), _v(tw, 'input_p_cu', 4), _v(tw, 'input_t_vnt', 4),
-            _v(tw, 'input_f_pd', 4), _v(tw, 'input_m_ip', 4),
-            # Repeated TW Results (9)
-            _v(tw, 'stage1_dilution', 4), _v(tw, 'stage2_dilution', 4),
-            _v(tw, 'total_dilution', 4), _v(tw, 'filtration_pct', 4),
-            _v(tw, 'stage1_pacifying_nicotine_demand', 4), _v(tw, 'stage2_pacifying_nicotine_demand', 4),
-            _v(tw, 'total_pacifying_nicotine_demand', 4), _v(tw, 'total_filtration_pct', 4),
-            _v(tw, 'total_nicotine_demand', 4),
-            # Repeated TW Output (3)
-            _v(tw, 'w_dry', 2), _v(tw, 'w_tob', 2), _v(tw, 'w_cig', 2),
-            # Stage No + NPL
-            '',  # Stage No
-            _v(npl, 'npl_pct', 2),
+            # QA Measurements
+            _v(qa, 'pack_ov', 2),
+            _v(qa, 'lamina_cpi', 2), _v(qa, 'filling_power', 2),
+            _v(qa, 'filling_power_corr', 2), _v(qa, 'maker_moisture', 2), _v(qa, 'ssi', 2),
+            _v(qa, 'pan_pct', 2), _v(qa, 'total_cig_length', 2),
+            _v(qa, 'circumference_mean', 2), _v(qa, 'circumference_sd', 2), _v(qa, 'cig_dia', 2),
+            _v(qa, 'tobacco_weight_mean', 2), _v(qa, 'tobacco_weight_sd', 2),
+            _v(qa, 'tip_vf', 2), _v(qa, 'tip_vf_sd', 2),
+            _v(qa, 'filter_pd_mean', 2), _v(qa, 'filter_weight', 2),
+            _v(qa, 'plug_wrap_cu', 2), _v(qa, 'tow') if qa else '',
+            _v(qa, 'cig_wt_mean', 2), _v(qa, 'cig_wt_sd', 2),
+            _v(qa, 'cig_pdo', 2), _v(qa, 'cig_hardness', 2), _v(qa, 'cig_corr_hardness', 2),
+            _v(qa, 'loose_shorts', 2), _v(qa, 'plug_length', 2),
+            _v(qa, 'mc'), _v(qa, 'company'),
+            po.status or '',
         ]
 
     _write_sheet(ws_prod, prod_headers, prod_row)
@@ -494,13 +512,17 @@ def export_excel():
         'FG+Blend', 'MC', 'Company',
         'Pack OV', 'Lamina CPI', 'Filling Power', 'FP Corr', 'Maker Moist', 'SSI',
         'PAN%', 'Total Cig Length', 'Circ Mean', 'Circ SD', 'Cig Dia',
-        'TIP VF', 'TIP VF SD', 'Filter PD', 'W_NTM', 'Plug Wrap CU', 'TOW',
+        'Tob Wt Mean', 'Tob Wt SD',
+        'TIP VF', 'TIP VF SD', 'Filter PD', 'Filter Weight',
+        'Plug Wrap CU', 'TOW',
+        'Cig Wt Mean', 'Cig Wt SD',
         'Cig PDO', 'Cig Hard', 'Cig Corr Hard', 'Loose Shorts', 'Plug Length',
-        'Tob Wt Mean', 'Tob Wt SD', 'Status',
+        'Status',
     ]
 
     def qa_row(r, idx):
-        po, fg, qa = r['po'], r['fg'], r['qa']
+        po, fg = r['po'], r['fg']
+        qa = r['qa'] or r.get('prev_qa')
         fg_blend = f"{fg.fg_code}, {fg.blend_code}" if fg and fg.fg_code and fg.blend_code else (fg.fg_code if fg else '')
         return [
             idx, r['qr_date'], po.process_date, r['npl_date'], po.process_order_number,
@@ -511,11 +533,13 @@ def export_excel():
             _v(qa, 'filling_power_corr', 2), _v(qa, 'maker_moisture', 2), _v(qa, 'ssi', 2),
             _v(qa, 'pan_pct', 2), _v(qa, 'total_cig_length', 2),
             _v(qa, 'circumference_mean', 2), _v(qa, 'circumference_sd', 2), _v(qa, 'cig_dia', 2),
+            _v(qa, 'tobacco_weight_mean', 2), _v(qa, 'tobacco_weight_sd', 2),
             _v(qa, 'tip_vf', 2), _v(qa, 'tip_vf_sd', 2), _v(qa, 'filter_pd_mean', 2),
-            _v(qa, 'w_ntm', 2), _v(qa, 'plug_wrap_cu', 2), _v(qa, 'tow') if qa else '',
+            _v(qa, 'filter_weight', 2),
+            _v(qa, 'plug_wrap_cu', 2), _v(qa, 'tow') if qa else '',
+            _v(qa, 'cig_wt_mean', 2), _v(qa, 'cig_wt_sd', 2),
             _v(qa, 'cig_pdo', 2), _v(qa, 'cig_hardness', 2), _v(qa, 'cig_corr_hardness', 2),
             _v(qa, 'loose_shorts', 2), _v(qa, 'plug_length', 2),
-            '', '',  # Tob Wt Mean/SD
             po.status or '',
         ]
 
@@ -593,19 +617,23 @@ _PASTE_COL_MAP = {
     21: ('circumference_mean', 'float'),
     22: ('circumference_sd', 'float'),
     23: ('cig_dia', 'float'),
-    24: ('tip_vf', 'float'),
-    25: ('tip_vf_sd', 'float'),
-    26: ('filter_pd_mean', 'float'),
-    27: ('w_ntm', 'float'),
-    28: ('plug_wrap_cu', 'float'),
-    29: ('tow', 'string'),
-    30: ('cig_pdo', 'float'),
-    31: ('cig_hardness', 'float'),
-    32: ('cig_corr_hardness', 'float'),
-    33: ('loose_shorts', 'float'),
-    34: ('plug_length', 'float'),
-    35: ('mc', 'string'),
-    36: ('company', 'string'),
+    24: ('tobacco_weight_mean', 'float'),
+    25: ('tobacco_weight_sd', 'float'),
+    26: ('tip_vf', 'float'),
+    27: ('tip_vf_sd', 'float'),
+    28: ('filter_pd_mean', 'float'),
+    29: ('filter_weight', 'float'),
+    30: ('plug_wrap_cu', 'float'),
+    31: ('tow', 'string'),
+    32: ('cig_wt_mean', 'float'),
+    33: ('cig_wt_sd', 'float'),
+    34: ('cig_pdo', 'float'),
+    35: ('cig_hardness', 'float'),
+    36: ('cig_corr_hardness', 'float'),
+    37: ('loose_shorts', 'float'),
+    38: ('plug_length', 'float'),
+    39: ('mc', 'string'),
+    40: ('company', 'string'),
 }
 
 _DATE_FORMATS = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y', '%d %b %Y', '%Y%m%d']

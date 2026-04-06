@@ -30,7 +30,9 @@ target_metadata = Base.metadata
 # Build DB URL from app config
 flask_env = os.getenv('FLASK_ENV', 'development')
 app_config = config_by_name.get(flask_env, config_by_name['development'])()
-config.set_main_option('sqlalchemy.url', app_config.SQLALCHEMY_DATABASE_URI)
+# Escape '%' for configparser interpolation
+config.set_main_option('sqlalchemy.url',
+                       app_config.SQLALCHEMY_DATABASE_URI.replace('%', '%%'))
 
 
 def run_migrations_offline():
