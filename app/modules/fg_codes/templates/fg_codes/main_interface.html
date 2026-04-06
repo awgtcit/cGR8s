@@ -650,9 +650,24 @@
                         <i class="bi bi-graph-up-arrow me-1"></i>Optimizer
                     </button>
                 </div>
-                <!-- Inline PO Save Section (shown after Calculate Target) -->
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="fg-calc-section">
+            <div class="fg-card" style="height:100%;">
+                <div class="fg-card-head">
+                    <h6><i class="bi bi-bar-chart me-1"></i> Calculation Results</h6>
+                </div>
+                <div class="fg-card-body padded" id="resultsContent">
+                    <div class="empty-state" style="min-height:220px;">
+                        <i class="bi bi-play-circle"></i>
+                        <p>Configure variables and run calculation</p>
+                    </div>
+                </div>
+                <!-- Inline PO Save Section (below Target Weight) -->
                 <div id="poInlineSection"
-                    style="display:none; margin-top:12px; padding:10px; background:#f8faf9; border-radius:8px; border:1px solid #e5e7eb;">
+                    style="margin-top:12px; padding:10px; background:#f8faf9; border-radius:8px; border:1px solid #e5e7eb;">
                     <div class="d-flex gap-2 align-items-end flex-wrap">
                         <div>
                             <label class="form-label fw-semibold mb-1" style="font-size:0.8rem;">Process Date</label>
@@ -669,30 +684,25 @@
                     </div>
                     <div id="poSaveStatus" class="mt-1" style="font-size:0.8rem;"></div>
                 </div>
-                <!-- Calculate NPL button (shown after PO save) -->
-                <div id="calcNplSection" style="display:none; margin-top:8px;">
-                    <button type="button" id="calcNplBtn" class="btn btn-sm btn-success w-100">
-                        <i class="bi bi-graph-down me-1"></i>Calculate NPL
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Results -->
-        <div class="fg-calc-section">
-            <div class="fg-card" style="height:100%;">
-                <div class="fg-card-head">
-                    <h6><i class="bi bi-bar-chart me-1"></i> Calculation Results</h6>
-                </div>
-                <div class="fg-card-body padded" id="resultsContent">
-                    <div class="empty-state" style="min-height:220px;">
-                        <i class="bi bi-play-circle"></i>
-                        <p>Configure variables and run calculation</p>
+                <!-- Calculate NPL card (shown after PO save) -->
+                <div id="calcNplSection" style="display:none; margin-top:10px;">
+                    <div
+                        style="padding:14px 16px; background:#f0fdf4; border-radius:8px; border:1px solid #bbf7d0; min-height:80px;">
+                        <p class="mb-2 fw-semibold" style="font-size:0.9rem;"><i
+                                class="bi bi-check-circle-fill text-success me-1"></i>Process Order saved successfully
+                        </p>
+                        <button type="button" id="calcNplBtn" class="btn btn-success w-100"
+                            style="padding:10px 0; font-size:0.9rem;">
+                            <i class="bi bi-graph-down me-1"></i>Calculate NPL
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+</div>
+</div>
 </div>
 {% endblock %}
 
@@ -984,8 +994,7 @@
                 success: function (data) {
                     lastCalcResults = data;
                     renderResults(data);
-                    // Show inline PO save section after calculation
-                    $('#poInlineSection').show();
+                    // Set default process date if empty
                     if (!$('#processDate').val()) {
                         $('#processDate').val(new Date().toISOString().split('T')[0]);
                     }
@@ -1046,6 +1055,7 @@
             const poDate = $('#processDate').val();
             if (!poId || !poDate) { alert('Please fill Process Order and Date'); return; }
             if (!selectedFgCode) { alert('Please select an FG Code first'); return; }
+            if (!lastCalcResults) { alert('Please run Calculate Target first'); return; }
 
             const kv = {
                 n_bld: parseFloat($('#n_bld').val()) || 0,
@@ -1074,8 +1084,10 @@
                     savedPOId = resp.process_order_id;
                     const msg = resp.updated ? '✓ Updated' : '✓ Saved';
                     $('#poSaveStatus').text(msg).css('color', 'green');
-                    // Show Calculate NPL button
-                    $('#calcNplSection').show();
+                    // Show Calculate NPL card and scroll to it
+                    $('#calcNplSection').slideDown(300, function () {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
                 },
                 error: function (xhr) {
                     const msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error saving order';
@@ -1086,7 +1098,7 @@
 
         $('#calcNplBtn').click(function () {
             if (!savedPOId) { alert('Please save the Process Order first'); return; }
-            window.location.href = '/npl/calculate/' + savedPOId;
+            window.location.href = '{{ url_for("npl.calculate", process_order_id="__PO_ID__") }}'.replace('__PO_ID__', savedPOId);
         });
     });
 </script>

@@ -18,13 +18,13 @@ Macro: QA Analysis grid – 42 columns (5 new QA measurement columns)
         'Cig PDO','Cig. Hardness','Cig. Corr. Hardness','Loose Shorts','Plug Length',
         'MC','Company','Status'] %}
         {% for col in cols %}
-        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
-        {% endfor %}
-    </tr>
-    <tr>
-        {% for i in range(cols|length) %}
-        <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter...{% endif %}"
-                oninput="colFilter('{{ grid_id }}',{{ i }},this.value)">
+        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">
+            <div class="th-wrap">
+                <span class="th-label">{{ col }}</span>
+                <button type="button" class="filter-btn"
+                    onclick="event.stopPropagation();openFilterPopup('{{ grid_id }}',{{ loop.index0 }},this)"
+                    title="Filter">&#9660;</button>
+            </div>
         </th>
         {% endfor %}
     </tr>
@@ -146,13 +146,14 @@ TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Status
         'Loose Shorts','Plug Length',
         'MC','Company','Status'] %}
         {% for col in cols %}
-        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
-        {% endfor %}
-    </tr>
-    <tr>
-        {% for i in range(cols|length) %}
-        <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter{% endif %}"
-                oninput="colFilter('{{ grid_id }}',{{ i }},this.value)"></th>
+        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">
+            <div class="th-wrap">
+                <span class="th-label">{{ col }}</span>
+                <button type="button" class="filter-btn"
+                    onclick="event.stopPropagation();openFilterPopup('{{ grid_id }}',{{ loop.index0 }},this)"
+                    title="Filter">&#9660;</button>
+            </div>
+        </th>
         {% endfor %}
     </tr>
 </thead>
@@ -306,13 +307,14 @@ Column AA = TP (instead of TISS).
         'TAC','TTC','NPL%','NPL KG',
         'FG+Blend','Status'] %}
         {% for col in cols %}
-        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
-        {% endfor %}
-    </tr>
-    <tr>
-        {% for i in range(cols|length) %}
-        <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter{% endif %}"
-                oninput="colFilter('{{ grid_id }}',{{ i }},this.value)"></th>
+        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">
+            <div class="th-wrap">
+                <span class="th-label">{{ col }}</span>
+                <button type="button" class="filter-btn"
+                    onclick="event.stopPropagation();openFilterPopup('{{ grid_id }}',{{ loop.index0 }},this)"
+                    title="Filter">&#9660;</button>
+            </div>
+        </th>
         {% endfor %}
     </tr>
 </thead>
@@ -447,30 +449,31 @@ Column AA = TP (instead of TISS).
         min-width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        font-size: 0.78rem;
-        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        font-size: 0.75rem;
+        font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+        table-layout: auto;
     }
 
     .excel-grid thead th {
         position: sticky;
         top: 0;
         z-index: 2;
-        background: #f1f5f9;
-        color: var(--cgr-text);
+        background: #e2efda;
+        color: #1f4e25;
         font-weight: 700;
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 6px 10px;
-        border-bottom: 2px solid var(--cgr-border);
-        border-right: 1px solid #e2e8f0;
+        letter-spacing: 0.02em;
+        padding: 4px 6px;
+        border-bottom: 1px solid #b4c9a8;
+        border-right: 1px solid #c6d9b6;
         white-space: nowrap;
         cursor: pointer;
         user-select: none;
     }
 
     .excel-grid thead th:hover {
-        background: #e2e8f0;
+        background: #d4e4c8;
     }
 
     .excel-grid thead th.sorted-asc::after {
@@ -484,100 +487,34 @@ Column AA = TP (instead of TISS).
     }
 
     .excel-grid tbody td {
-        padding: 5px 10px;
-        border-bottom: 1px solid #f1f5f9;
-        border-right: 1px solid #f1f5f9;
+        padding: 3px 6px;
+        border-bottom: 1px solid #e5e7eb;
+        border-right: 1px solid #e5e7eb;
         white-space: nowrap;
         color: var(--cgr-text);
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .excel-grid tbody tr:nth-child(even) td {
-        background: #f8fafc;
+        background: #f9f9f9;
     }
 
     .excel-grid tbody tr:hover td {
-        background: #f0fdf4;
+        background: #e8f5e9;
     }
 
     .excel-grid tbody tr.selected td {
-        background: #dcfce7;
+        background: #c8e6c9;
     }
 
-    /* ── Sticky first 6 columns (RID → SKU) ─────────────── */
-    .excel-grid thead th:nth-child(-n+6),
-    .excel-grid tbody td:nth-child(-n+6) {
-        position: sticky;
-        z-index: 1;
-    }
-
-    .excel-grid thead th:nth-child(-n+6) {
-        z-index: 3;
-    }
-
-    /* left offsets (cumulative widths) */
+    /* ── Row number column ─────────────── */
     .excel-grid thead th:nth-child(1),
     .excel-grid tbody td:nth-child(1) {
-        left: 0;
-        min-width: 32px;
-        max-width: 42px;
-        padding: 5px 4px;
+        padding: 3px 4px;
         text-align: center;
-    }
-
-    .excel-grid thead tr:nth-child(2) th:nth-child(1) .col-filter {
-        width: 22px;
-        min-width: 0;
-        padding: 2px;
-        text-align: center;
-    }
-
-    .excel-grid thead th:nth-child(2),
-    .excel-grid tbody td:nth-child(2) {
-        left: 42px;
-        min-width: 100px;
-    }
-
-    .excel-grid thead th:nth-child(3),
-    .excel-grid tbody td:nth-child(3) {
-        left: 142px;
-        min-width: 110px;
-    }
-
-    .excel-grid thead th:nth-child(4),
-    .excel-grid tbody td:nth-child(4) {
-        left: 252px;
-        min-width: 100px;
-    }
-
-    .excel-grid thead th:nth-child(5),
-    .excel-grid tbody td:nth-child(5) {
-        left: 352px;
-        min-width: 150px;
-    }
-
-    .excel-grid thead th:nth-child(6),
-    .excel-grid tbody td:nth-child(6) {
-        left: 502px;
-        min-width: 100px;
-        border-right: 2px solid #cbd5e1;
-    }
-
-    /* header backgrounds */
-    .excel-grid thead th:nth-child(-n+6) {
-        background: #f1f5f9;
-    }
-
-    /* body backgrounds for zebra + hover */
-    .excel-grid tbody tr:nth-child(even) td:nth-child(-n+6) {
-        background: #f8fafc;
-    }
-
-    .excel-grid tbody tr:nth-child(odd) td:nth-child(-n+6) {
-        background: #fff;
-    }
-
-    .excel-grid tbody tr:hover td:nth-child(-n+6) {
-        background: #f0fdf4;
+        width: 30px;
     }
 
     .excel-grid .num {
@@ -642,6 +579,166 @@ Column AA = TP (instead of TISS).
 
     .highlight {
         background: #fef08a !important;
+    }
+
+    /* ── Excel-style dropdown filter ── */
+
+    .th-wrap {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        justify-content: space-between;
+    }
+
+    .th-label {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .filter-btn {
+        background: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        padding: 1px 3px;
+        font-size: 0.6rem;
+        color: #6b7280;
+        line-height: 1;
+        flex-shrink: 0;
+        border-radius: 2px;
+    }
+
+    .filter-btn:hover {
+        color: #1f4e25;
+        background: #d4e4c8;
+        border-color: #b4c9a8;
+    }
+
+    .filter-btn.active {
+        color: #fff;
+        background: #217346;
+        border-color: #217346;
+        font-weight: 700;
+    }
+
+    .filter-popup {
+        position: fixed;
+        z-index: 9999;
+        background: #fff;
+        border: 1px solid #b4c9a8;
+        border-radius: 4px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, .15);
+        width: 230px;
+        max-height: 350px;
+        display: flex;
+        flex-direction: column;
+        font-size: 0.75rem;
+        font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    }
+
+    .filter-popup-header {
+        padding: 8px 10px 6px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #e2efda;
+    }
+
+    .filter-popup-search {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        font-family: inherit;
+    }
+
+    .filter-popup-search:focus {
+        border-color: var(--cgr-primary);
+        outline: none;
+    }
+
+    .filter-popup-actions {
+        padding: 4px 10px;
+        display: flex;
+        gap: 8px;
+        font-size: 0.72rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .filter-popup-actions a {
+        color: var(--cgr-primary);
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .filter-popup-actions a:hover {
+        text-decoration: underline;
+    }
+
+    .filter-popup-list {
+        overflow-y: auto;
+        flex: 1;
+        padding: 4px 0;
+        max-height: 200px;
+    }
+
+    .filter-popup-list label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .filter-popup-list label:hover {
+        background: #f0fdf4;
+    }
+
+    .filter-popup-list input[type="checkbox"] {
+        accent-color: var(--cgr-primary);
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+
+    .filter-popup-footer {
+        padding: 6px 10px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .filter-popup-footer button {
+        font-size: 0.75rem;
+        padding: 3px 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .fp-ok {
+        background: #217346;
+        color: #fff;
+        border: 1px solid #217346;
+    }
+
+    .fp-ok:hover {
+        background: #1a5c38;
+    }
+
+    .fp-cancel {
+        background: #fff;
+        color: var(--cgr-text);
+        border: 1px solid #cbd5e1;
+    }
+
+    .fp-cancel:hover {
+        background: #f8fafc;
     }
 
     .btn-export {
@@ -863,6 +960,15 @@ Column AA = TP (instead of TISS).
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-qa">QA Analysis</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-daily">Daily Operation</a></li>
 </ul>
+<script>
+    (function () {
+        var p = new URLSearchParams(window.location.search).get('tab');
+        if (p) {
+            var el = document.querySelector('a[href="#tab-' + p + '"]');
+            if (el) { new bootstrap.Tab(el).show(); }
+        }
+    })();
+</script>
 
 <div class="tab-content">
     {# ══════════════════════ PRODUCTION DATA TAB ══════════════════════ #}
@@ -958,31 +1064,165 @@ Column AA = TP (instead of TISS).
         if (countEl) countEl.textContent = visible + ' rows';
     }
 
-    /* ── Column Filter ────────────────────────────────────── */
-    const colFilters = {};
-    function colFilter(tableId, colIdx, value) {
-        if (!colFilters[tableId]) colFilters[tableId] = {};
-        colFilters[tableId][colIdx] = value.toLowerCase();
-        // Highlight active filters
-        const input = event.target;
-        if (value) { input.classList.add('active'); }
-        else { input.classList.remove('active'); }
-        applyColFilters(tableId);
+    /* ── Column Filter (Excel-style dropdown) ─────────────── */
+    const colFilterState = {}; // { tableId: { colIdx: Set of allowed values } }
+    let activePopup = null;
+
+    function getCellText(td) {
+        const inp = td.querySelector('.cell-input');
+        return inp ? inp.value.trim() : td.textContent.trim();
     }
-    function applyColFilters(tableId) {
+
+    function openFilterPopup(tableId, colIdx, btnEl) {
+        closeFilterPopup();
+        const table = document.getElementById(tableId);
+        const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+        // Collect unique values from this column
+        const vals = new Map();
+        rows.forEach(tr => {
+            const td = tr.querySelectorAll('td')[colIdx];
+            if (!td) return;
+            const v = getCellText(td) || '(Blank)';
+            vals.set(v, (vals.get(v) || 0) + 1);
+        });
+        const sorted = Array.from(vals.keys()).sort((a, b) => {
+            if (a === '(Blank)') return 1;
+            if (b === '(Blank)') return -1;
+            const na = parseFloat(a), nb = parseFloat(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return a.localeCompare(b);
+        });
+
+        // Get currently selected values (or all if no filter)
+        if (!colFilterState[tableId]) colFilterState[tableId] = {};
+        const selected = colFilterState[tableId][colIdx] || null; // null = all selected
+
+        // Build popup
+        const popup = document.createElement('div');
+        popup.className = 'filter-popup';
+        popup.innerHTML = `
+            <div class="filter-popup-header">
+                <input type="text" class="filter-popup-search" placeholder="Search..." oninput="filterPopupSearch(this)">
+            </div>
+            <div class="filter-popup-actions">
+                <a onclick="popupSelectAll(this)">Select All</a>
+                <a onclick="popupClearAll(this)">Clear</a>
+            </div>
+            <div class="filter-popup-list">
+                ${sorted.map(v => {
+            const checked = selected === null || selected.has(v) ? 'checked' : '';
+            const esc = v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            return `<label><input type="checkbox" value="${esc}" ${checked}><span>${esc} <small style="color:#94a3b8">(${vals.get(v)})</small></span></label>`;
+        }).join('')}
+            </div>
+            <div class="filter-popup-footer">
+                <button class="fp-cancel" onclick="closeFilterPopup()">Cancel</button>
+                <button class="fp-ok" onclick="applyFilterPopup('${tableId}',${colIdx})">OK</button>
+            </div>`;
+
+        // Position popup near the button
+        const rect = btnEl.getBoundingClientRect();
+        popup.style.top = (rect.bottom + 2) + 'px';
+        popup.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+
+        document.body.appendChild(popup);
+        activePopup = { el: popup, tableId, colIdx };
+        btnEl.classList.add('active');
+
+        // Focus search
+        popup.querySelector('.filter-popup-search').focus();
+
+        // Click outside to close
+        setTimeout(() => document.addEventListener('mousedown', outsideClickHandler), 0);
+    }
+
+    function outsideClickHandler(e) {
+        if (activePopup && !activePopup.el.contains(e.target)) {
+            closeFilterPopup();
+        }
+    }
+
+    function closeFilterPopup() {
+        document.removeEventListener('mousedown', outsideClickHandler);
+        if (activePopup) {
+            activePopup.el.remove();
+            activePopup = null;
+        }
+        // Reset all filter btn active states then re-apply
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        // Mark active for columns that have active filters
+        for (const tid in colFilterState) {
+            for (const ci in colFilterState[tid]) {
+                if (colFilterState[tid][ci] !== null) {
+                    const t = document.getElementById(tid);
+                    if (t) {
+                        const ths = t.querySelectorAll('thead tr:first-child th');
+                        if (ths[ci]) {
+                            const btn = ths[ci].querySelector('.filter-btn');
+                            if (btn) btn.classList.add('active');
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function filterPopupSearch(input) {
+        const q = input.value.toLowerCase();
+        const labels = input.closest('.filter-popup').querySelectorAll('.filter-popup-list label');
+        labels.forEach(lbl => {
+            const text = lbl.textContent.toLowerCase();
+            lbl.style.display = text.includes(q) ? '' : 'none';
+        });
+    }
+
+    function popupSelectAll(a) {
+        a.closest('.filter-popup').querySelectorAll('.filter-popup-list input[type="checkbox"]').forEach(cb => {
+            if (cb.closest('label').style.display !== 'none') cb.checked = true;
+        });
+    }
+
+    function popupClearAll(a) {
+        a.closest('.filter-popup').querySelectorAll('.filter-popup-list input[type="checkbox"]').forEach(cb => {
+            if (cb.closest('label').style.display !== 'none') cb.checked = false;
+        });
+    }
+
+    function applyFilterPopup(tableId, colIdx) {
+        if (!activePopup) return;
+        const checks = activePopup.el.querySelectorAll('.filter-popup-list input[type="checkbox"]');
+        const total = checks.length;
+        const selected = new Set();
+        checks.forEach(cb => { if (cb.checked) selected.add(cb.value); });
+
+        if (!colFilterState[tableId]) colFilterState[tableId] = {};
+
+        if (selected.size === total) {
+            // All selected = no filter
+            delete colFilterState[tableId][colIdx];
+        } else {
+            colFilterState[tableId][colIdx] = selected;
+        }
+
+        closeFilterPopup();
+        applyAllFilters(tableId);
+    }
+
+    function applyAllFilters(tableId) {
         const table = document.getElementById(tableId);
         const rows = table.querySelectorAll('tbody tr');
-        const filters = colFilters[tableId] || {};
+        const filters = colFilterState[tableId] || {};
         let visible = 0;
         rows.forEach(tr => {
             const cells = tr.querySelectorAll('td');
             let show = true;
-            for (const [col, val] of Object.entries(filters)) {
-                if (val && cells[col]) {
-                    if (!cells[col].textContent.toLowerCase().includes(val)) {
-                        show = false;
-                        break;
-                    }
+            for (const colStr in filters) {
+                const col = parseInt(colStr, 10);
+                const allowed = filters[colStr];
+                if (allowed && cells[col]) {
+                    const val = getCellText(cells[col]) || '(Blank)';
+                    if (!allowed.has(val)) { show = false; break; }
                 }
             }
             tr.style.display = show ? '' : 'none';

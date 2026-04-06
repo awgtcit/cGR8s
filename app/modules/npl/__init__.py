@@ -263,5 +263,9 @@ def verify(process_order_id):
                     entity_id=process_order_id,
                     after_value={'verified': True, 'status': po.status},
                     module='npl')
+
+    # Return JSON for AJAX requests, redirect otherwise
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': 'NPL saved successfully'})
     flash_success('NPL result verified and confirmed')
-    return redirect(url_for('npl.index'))
+    return redirect(url_for('qa.data_grid'))
