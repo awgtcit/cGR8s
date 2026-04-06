@@ -29,6 +29,7 @@ def init_db(app):
         pool_timeout=config.get('DB_POOL_TIMEOUT', 30),
         pool_pre_ping=True,
         echo=config.get('DEBUG', False),
+        use_setinputsizes=False,
     )
 
     _session_factory = sessionmaker(bind=_engine)
