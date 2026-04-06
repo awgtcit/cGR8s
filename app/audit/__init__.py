@@ -34,23 +34,29 @@ class AuditLogger:
         """Write an audit log entry."""
         try:
             session = get_scoped_session()
-            entry = AuditLog(
-                id=generate_uuid(),
-                timestamp=datetime.now(timezone.utc),
-                user_id=user_id or getattr(g, 'user_id', None),
-                user_email=user_email or getattr(g, 'user_email', None),
-                action=action,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                description=description,
-                before_value=json.dumps(before_value, default=str) if before_value else None,
-                after_value=json.dumps(after_value, default=str) if after_value else None,
-                ip_address=request.remote_addr if request else None,
-                user_agent=str(request.user_agent)[:500] if request else None,
-                module=module,
-            )
-            session.add(entry)
-            session.flush()
+            nested = session.begin_nested()
+            try:
+                entry = AuditLog(
+                    id=generate_uuid(),
+                    timestamp=datetime.now(timezone.utc),
+                    user_id=user_id or getattr(g, 'user_id', None),
+                    user_email=user_email or getattr(g, 'user_email', None),
+                    action=str(action) if action else action,
+                    entity_type=entity_type,
+                    entity_id=str(entity_id) if entity_id is not None else None,
+                    description=description or '',
+                    before_value=json.dumps(before_value, default=str) if before_value else '',
+                    after_value=json.dumps(after_value, default=str) if after_value else '',
+                    ip_address=request.remote_addr if request else None,
+                    user_agent=str(request.user_agent)[:500] if request else None,
+                    module=module,
+                )
+                session.add(entry)
+                session.flush()
+                nested.commit()
+            except Exception:
+                nested.rollback()
+                raise
         except Exception:
             logger.exception('Failed to write audit log')
 
