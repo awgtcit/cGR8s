@@ -419,7 +419,13 @@ def export_excel():
         # Auto-width (approximate)
         for ci, h in enumerate(headers, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(ci)].width = max(len(str(h)) + 2, 10)
-        ws.freeze_panes = 'A2'
+        # Freeze header row + columns up to SKU (col F → freeze at G2)
+        sku_col = next((i for i, h in enumerate(headers) if h == 'SKU'), None)
+        if sku_col is not None:
+            freeze_col = openpyxl.utils.get_column_letter(sku_col + 2)  # +1 for 1-index, +1 for next col
+            ws.freeze_panes = f'{freeze_col}2'
+        else:
+            ws.freeze_panes = 'A2'
 
     # ── Sheet 1: Production Data ──
     ws_prod = wb.active
