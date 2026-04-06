@@ -7,6 +7,7 @@ from app.models.key_variable import ProcessOrderKeyVariable
 from app.models.target_weight_result import TargetWeightResult
 from app.models.calibration_constant import CalibrationConstant
 from app.services.target_calculation_service import TargetCalculationService
+from app.services.nicotine_sync import sync_nicotine
 from app.utils.helpers import paginate_args, flash_success, flash_error
 from app.audit import AuditLogger
 from app.config.constants import AuditAction
@@ -173,6 +174,40 @@ def api_calculate_target():
     result = TargetCalculationService.calculate_forward_target(key_vars, calibration, fg_info)
 
     return jsonify(result)
+
+
+@bp.route('/api/update-n-target', methods=['POST'])
+@require_auth
+@require_permission(Permissions.MASTER_DATA_EDIT)
+def api_update_n_target():
+    """Update N Target (nicotine) with bidirectional sync between CalibrationConstant and SKU."""
+    data = request.get_json()
+    fg_code = str(data.get('fg_code', '')).strip()
+    n_tgt_raw = data.get('n_tgt')
+
+    if not fg_code or n_tgt_raw is None:
+        return jsonify({'error': 'Missing fg_code or n_tgt'}), 400
+
+    try:
+        n_tgt_val = float(n_tgt_raw)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid n_tgt value'}), 400
+
+    fg_repo = FGCodeRepository(g.db)
+    fg = fg_repo.get_by_code(fg_code)
+    if not fg:
+        return jsonify({'error': 'FG Code not found'}), 404
+
+    result = sync_nicotine(fg_code=fg_code, n_tgt_val=n_tgt_val)
+
+    g.db.commit()
+
+    AuditLogger.log(AuditAction.UPDATE, 'CalibrationConstant',
+                    entity_id=result.get('cal_obj').id if result.get('cal_obj') else None,
+                    after_value={'n_tgt': n_tgt_val, 'fg_code': fg_code, 'sku_synced': result['sku']},
+                    module='fg_codes')
+
+    return jsonify({'success': True, 'n_tgt': n_tgt_val})
 
 
 @bp.route('/api/process-order/create', methods=['POST'])

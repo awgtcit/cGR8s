@@ -129,6 +129,17 @@ def calibration_edit(id):
     if request.method == 'POST':
         data = request.form.to_dict()
         repo.update(id, data, row_version=int(request.form.get('row_version', 0)))
+
+        # Sync n_tgt → SKU.nicotine
+        if 'n_tgt' in data and cal.fg_code_id:
+            try:
+                n_tgt_val = float(data['n_tgt']) if data['n_tgt'] else None
+            except (ValueError, TypeError):
+                n_tgt_val = None
+            if n_tgt_val is not None:
+                from app.services.nicotine_sync import sync_nicotine
+                sync_nicotine(fg_code_id=cal.fg_code_id, n_tgt_val=n_tgt_val)
+
         g.db.commit()
         AuditLogger.log(AuditAction.UPDATE, 'CalibrationConstant', entity_id=id, after_value=data, module='master_data')
         flash_success('Calibration constant updated')
@@ -369,6 +380,17 @@ def sku_edit(id):
     if request.method == 'POST':
         data = request.form.to_dict()
         repo.update(id, data, row_version=int(request.form.get('row_version', 0)))
+
+        # Sync nicotine → CalibrationConstant.n_tgt
+        if 'nicotine' in data and sku.sku_code:
+            try:
+                nic_val = float(data['nicotine']) if data['nicotine'] else None
+            except (ValueError, TypeError):
+                nic_val = None
+            if nic_val is not None:
+                from app.services.nicotine_sync import sync_nicotine
+                sync_nicotine(fg_code=sku.sku_code, n_tgt_val=nic_val)
+
         g.db.commit()
         AuditLogger.log(AuditAction.UPDATE, 'SKU', entity_id=id, after_value=data, module='master_data')
         flash_success('SKU updated')

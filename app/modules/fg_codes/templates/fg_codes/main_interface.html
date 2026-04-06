@@ -857,7 +857,13 @@
                 + field('Condition (N<0.3)', d.calibration.gamma_condition)
                 + field('Gamma (γ)', d.calibration.gamma)
                 + '<div class="result-group-title mt-2">Target</div>'
-                + field('N Target', d.calibration.n_tgt)
+                + '<div class="detail-field">'
+                + '<span class="detail-field-label">' + esc('N Target') + '</span>'
+                + '<span class="detail-field-value d-flex align-items-center gap-1">'
+                + '<input type="number" step="0.001" id="nTargetInput" class="form-control form-control-sm" style="width:90px;padding:2px 6px;font-size:0.85rem" value="' + (d.calibration.n_tgt != null ? esc(d.calibration.n_tgt) : '') + '">'
+                + '<button class="btn btn-sm btn-primary py-0 px-2" style="font-size:0.75rem" onclick="saveNTarget()">Save</button>'
+                + '<span id="nTargetStatus" style="font-size:0.75rem"></span>'
+                + '</span></div>'
                 + (d.last_run_date ? field('Last Run', d.last_run_date) : '')
                 + '</div>'
                 + '<div class="detail-tab-pane" data-tab="targets" style="max-height:400px;overflow-y:auto">'
@@ -923,6 +929,25 @@
             return '<div class="detail-field"><span class="detail-field-label">' + esc(label) + '</span>'
                 + '<span class="detail-field-value">' + (val != null && val !== '' ? esc(val) : '—') + '</span></div>';
         }
+
+        function saveNTarget() {
+            if (!selectedFgCode) return;
+            var val = $('#nTargetInput').val();
+            if (val === '' || isNaN(val)) { $('#nTargetStatus').text('Invalid').css('color', 'red'); return; }
+            $('#nTargetStatus').text('Saving...').css('color', '#888');
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_update_n_target") }}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ fg_code: String(selectedFgCode), n_tgt: parseFloat(val) }),
+                success: function () { $('#nTargetStatus').text('✓ Saved').css('color', 'green'); },
+                error: function (xhr) {
+                    var msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error';
+                    $('#nTargetStatus').text(msg).css('color', 'red');
+                }
+            });
+        }
+        window.saveNTarget = saveNTarget;
 
         function loadKeyVars(d) {
             if (d.key_variables) {
