@@ -169,6 +169,7 @@ def calculate(process_order_id):
             existing_result.tobacco_consumed = npl_result.actual_consumption
             existing_result.theoretical_consumption = npl_result.theoretical_consumption
             existing_result.actual_consumption = npl_result.actual_consumption
+            existing_result.verified = False
             npl_res_repo.update(existing_result)
         else:
             npl_result_entity = NPLResultModel(
@@ -181,6 +182,7 @@ def calculate(process_order_id):
                 tobacco_consumed=npl_result.actual_consumption,
                 theoretical_consumption=npl_result.theoretical_consumption,
                 actual_consumption=npl_result.actual_consumption,
+                verified=False,
             )
             npl_res_repo.create(npl_result_entity)
         g.db.commit()
@@ -195,7 +197,8 @@ def calculate(process_order_id):
                         entity_id=process_order_id, after_value=result_data, module='npl')
         flash_success('NPL calculated successfully')
         return render_template('npl/result.html', po=po, fg=fg, result=npl_result,
-                               input_data=npl_form, ref=ref)
+                               input_data=npl_form, ref=ref,
+                               process_order_id=process_order_id)
 
     # GET: pre-fill from existing input or use defaults
     if existing_input:
@@ -228,3 +231,37 @@ def calculate(process_order_id):
     return render_template('npl/calculate.html',
                            po=po, fg=fg, tw=tw, ref=ref, data=data,
                            errors=[], npl_result=existing_result)
+
+
+@bp.route('/verify/<process_order_id>', methods=['POST'])
+@require_auth
+@require_permission(Permissions.NPL_CALCULATE)
+def verify(process_order_id):
+    """Verify NPL result and transition PO status Draft → Calculated."""
+    po_repo = ProcessOrderRepository(g.db)
+    po = po_repo.get_by_id(process_order_id)
+    if not po:
+        from app.utils.errors import NotFoundError
+        raise NotFoundError('Process Order', process_order_id)
+
+    npl_res_repo = NPLResultRepository(g.db)
+    npl_result = npl_res_repo.get_by_process_order(process_order_id)
+    if not npl_result:
+        flash_error('No NPL result to verify')
+        return redirect(url_for('npl.index'))
+
+    npl_result.verified = True
+
+    # Transition PO status: Draft → Calculated
+    from app.config.constants import ProcessOrderStatus
+    if po.status == ProcessOrderStatus.DRAFT.value:
+        po.status = ProcessOrderStatus.CALCULATED.value
+
+    g.db.commit()
+
+    AuditLogger.log(AuditAction.UPDATE, 'NPL',
+                    entity_id=process_order_id,
+                    after_value={'verified': True, 'status': po.status},
+                    module='npl')
+    flash_success('NPL result verified and confirmed')
+    return redirect(url_for('npl.index'))

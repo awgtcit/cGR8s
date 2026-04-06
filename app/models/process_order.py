@@ -11,7 +11,7 @@ class ProcessOrder(Base, AuditMixin, SoftDeleteMixin, VersionMixin):
     """A process order represents a single production run for an SKU."""
     __tablename__ = 'process_orders'
     __table_args__ = (
-        UniqueConstraint('process_order_number', name='uq_process_order_number'),
+        UniqueConstraint('process_order_number', 'process_date', name='uq_po_number_date'),
     )
 
     id = Column(String(36), primary_key=True, default=generate_uuid)

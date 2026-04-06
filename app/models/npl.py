@@ -2,7 +2,7 @@
 NPL (Non-Product Loss) input and result models.
 Maps to legacy: NPL Calculation workbook
 """
-from sqlalchemy import Column, String, Float, ForeignKey, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, DateTime, Boolean
 from app.database import Base
 from app.models.base import AuditMixin, generate_uuid
 from datetime import datetime, timezone
@@ -64,3 +64,4 @@ class NPLResult(Base, AuditMixin):
     theoretical_consumption = Column(Float, nullable=True)
     actual_consumption = Column(Float, nullable=True)
     variance = Column(Float, nullable=True)
+    verified = Column(Boolean, default=False, nullable=False)

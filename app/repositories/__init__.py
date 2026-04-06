@@ -132,6 +132,14 @@ class ProcessOrderRepository(BaseRepository[ProcessOrder]):
             ProcessOrder.is_deleted == False  # noqa: E712
         ).first()
 
+    def get_by_order_number_and_date(self, order_number: str, process_date):
+        """Find PO by composite key (order_number + process_date)."""
+        return self.session.query(ProcessOrder).filter(
+            ProcessOrder.process_order_number == order_number,
+            ProcessOrder.process_date == process_date,
+            ProcessOrder.is_deleted == False  # noqa: E712
+        ).first()
+
     def exists_by_order_id(self, order_id: str):
         """Check if process order ID already exists."""
         return self.session.query(ProcessOrder).filter(

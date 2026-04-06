@@ -234,9 +234,9 @@ def api_create_process_order():
     if not fg:
         return jsonify({'error': 'FG Code not found'}), 404
 
-    # Check for existing PO
+    # Check for existing PO with same number AND date (composite key)
     po_repo = ProcessOrderRepository(g.db)
-    existing_po = po_repo.get_by_order_number(process_order_id)
+    existing_po = po_repo.get_by_order_number_and_date(process_order_id, process_date)
 
     if existing_po:
         # Verify user has edit permission for updates

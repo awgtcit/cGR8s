@@ -552,10 +552,6 @@
             <div class="subtitle">Target Weight Calculation System</div>
         </div>
         <div class="fg-header-actions">
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#processOrderModal"
-                id="createPOHeaderBtn" disabled>
-                <i class="bi bi-plus-lg me-1"></i>Process Order
-            </button>
         </div>
     </div>
 
@@ -653,9 +649,30 @@
                     <button type="button" id="optimizerBtn" class="quick-action-btn" disabled>
                         <i class="bi bi-graph-up-arrow me-1"></i>Optimizer
                     </button>
-                    <button type="button" class="quick-action-btn" data-bs-toggle="modal"
-                        data-bs-target="#processOrderModal" id="createPOBtn" disabled>
-                        <i class="bi bi-plus-circle me-1"></i>Order
+                </div>
+                <!-- Inline PO Save Section (shown after Calculate Target) -->
+                <div id="poInlineSection"
+                    style="display:none; margin-top:12px; padding:10px; background:#f8faf9; border-radius:8px; border:1px solid #e5e7eb;">
+                    <div class="d-flex gap-2 align-items-end flex-wrap">
+                        <div>
+                            <label class="form-label fw-semibold mb-1" style="font-size:0.8rem;">Process Date</label>
+                            <input type="date" id="processDate" class="form-control form-control-sm" required>
+                        </div>
+                        <div>
+                            <label class="form-label fw-semibold mb-1" style="font-size:0.8rem;">Process Order</label>
+                            <input type="text" id="processOrderId" class="form-control form-control-sm"
+                                placeholder="e.g. 1013500" required>
+                        </div>
+                        <button type="button" id="savePOBtn" class="btn btn-sm btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Save
+                        </button>
+                    </div>
+                    <div id="poSaveStatus" class="mt-1" style="font-size:0.8rem;"></div>
+                </div>
+                <!-- Calculate NPL button (shown after PO save) -->
+                <div id="calcNplSection" style="display:none; margin-top:8px;">
+                    <button type="button" id="calcNplBtn" class="btn btn-sm btn-success w-100">
+                        <i class="bi bi-graph-down me-1"></i>Calculate NPL
                     </button>
                 </div>
             </div>
@@ -673,38 +690,6 @@
                         <p>Configure variables and run calculation</p>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Process Order Modal -->
-<div class="modal fade" id="processOrderModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:12px; border:none;">
-            <div class="modal-header" style="background:var(--cgr-mint); border-bottom:1px solid #e5e7eb;">
-                <h6 class="modal-title fw-bold" style="color:var(--cgr-forest);">
-                    <i class="bi bi-clipboard-plus me-1"></i> Create Process Order
-                </h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="processOrderForm">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:0.85rem;">Process Order ID</label>
-                        <input type="text" id="processOrderId" class="form-control" placeholder="e.g. 1013500" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:0.85rem;">Process Date</label>
-                        <input type="date" id="processDate" class="form-control" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer" style="border-top:1px solid #f3f4f6;">
-                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="createProcessOrderBtn" class="btn btn-sm btn-primary">
-                    <i class="bi bi-check-lg me-1"></i>Create Order
-                </button>
             </div>
         </div>
     </div>
@@ -963,7 +948,7 @@
         }
 
         function enableControls() {
-            $('#calculateBtn, #nplBtn, #optimizerBtn, #createPOBtn, #createPOHeaderBtn').prop('disabled', false);
+            $('#calculateBtn, #nplBtn, #optimizerBtn').prop('disabled', false);
         }
 
         // ── Tab switching ─────────────────────────────────
@@ -996,7 +981,15 @@
                 method: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({ key_variables: kv, calibration: cal, fg_info: fgInfo }),
-                success: function (data) { lastCalcResults = data; renderResults(data); },
+                success: function (data) {
+                    lastCalcResults = data;
+                    renderResults(data);
+                    // Show inline PO save section after calculation
+                    $('#poInlineSection').show();
+                    if (!$('#processDate').val()) {
+                        $('#processDate').val(new Date().toISOString().split('T')[0]);
+                    }
+                },
                 error: function () {
                     $('#resultsContent').html('<div class="empty-state" style="min-height:220px"><i class="bi bi-exclamation-triangle text-danger"></i><p>Calculation failed</p></div>');
                 }
@@ -1044,13 +1037,15 @@
         $('#nplBtn').click(function () { window.location.href = '{{ url_for("npl.index") }}'; });
         $('#optimizerBtn').click(function () { window.location.href = '{{ url_for("optimizer.index") }}'; });
 
-        // ── Process Order creation ────────────────────────
+        // ── Inline PO Save ────────────────────────────────
         $('#processDate').val(new Date().toISOString().split('T')[0]);
+        let savedPOId = null;
 
-        $('#createProcessOrderBtn').click(function () {
+        $('#savePOBtn').click(function () {
             const poId = $('#processOrderId').val().trim();
             const poDate = $('#processDate').val();
-            if (!poId || !poDate) { alert('Please fill all fields'); return; }
+            if (!poId || !poDate) { alert('Please fill Process Order and Date'); return; }
+            if (!selectedFgCode) { alert('Please select an FG Code first'); return; }
 
             const kv = {
                 n_bld: parseFloat($('#n_bld').val()) || 0,
@@ -1060,6 +1055,8 @@
                 m_ip: parseFloat($('#m_ip').val()) || 0
             };
             const cal = skuDetails ? skuDetails.calibration : {};
+
+            $('#poSaveStatus').text('Saving…').css('color', '#888');
 
             $.ajax({
                 url: '{{ url_for("fg_codes.api_create_process_order") }}',
@@ -1074,18 +1071,22 @@
                     calculation_results: lastCalcResults || {}
                 }),
                 success: function (resp) {
-                    const msg = resp.updated
-                        ? 'Process Order updated successfully'
-                        : 'Process Order created successfully';
-                    alert(msg);
-                    $('#processOrderModal').modal('hide');
-                    $('#processOrderForm')[0].reset();
-                    $('#processDate').val(new Date().toISOString().split('T')[0]);
+                    savedPOId = resp.process_order_id;
+                    const msg = resp.updated ? '✓ Updated' : '✓ Saved';
+                    $('#poSaveStatus').text(msg).css('color', 'green');
+                    // Show Calculate NPL button
+                    $('#calcNplSection').show();
                 },
                 error: function (xhr) {
-                    alert(xhr.responseJSON ? xhr.responseJSON.error : 'Error creating order');
+                    const msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error saving order';
+                    $('#poSaveStatus').text(msg).css('color', 'red');
                 }
             });
+        });
+
+        $('#calcNplBtn').click(function () {
+            if (!savedPOId) { alert('Please save the Process Order first'); return; }
+            window.location.href = '/npl/calculate/' + savedPOId;
         });
     });
 </script>
