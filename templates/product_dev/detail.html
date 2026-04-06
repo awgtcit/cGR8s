@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Product Dev Request{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('product_dev.index') }}">Product Dev</a>
+<span class="separator">/</span>
+<span class="current">Detail</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-flask"></i> Product Dev Request</h2>
+    <div>
+        <a href="{{ url_for('product_dev.edit', id=item_id) }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a href="{{ url_for('product_dev.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted">Detail view will be wired once the data model is ready.</p>
+    </div>
+</div>
+{% endblock %}

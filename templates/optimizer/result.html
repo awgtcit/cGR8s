@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Optimizer Result{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('optimizer.index') }}">Optimizer</a>
+<span class="separator">/</span>
+<span class="current">Result</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-sliders"></i> Optimizer Result</h2>
+    <div>
+        <a href="{{ url_for('optimizer.run', process_order_id=run.process_order_id) }}"
+            class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> Re-run</a>
+        <a href="{{ url_for('optimizer.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>
+            Back</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Run Information</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>Process Order</th>
+                        <td>{{ po.process_order_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>FG Code</th>
+                        <td>{{ fg.fg_code }}</td>
+                    </tr>
+                    <tr>
+                        <th>Method</th>
+                        <td><span class="badge bg-info">{{ run.method }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Run At</th>
+                        <td>{{ run.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td>
+                            {% if result and result.within_tolerance %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Within Tolerance</span>
+                            {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Outside
+                                Tolerance</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Optimized Weights</div>
+            <div class="card-body">
+                {% if result %}
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="kpi-card p-2">
+                            <div class="kpi-value">{{ "%.4f"|format(result.optimized_cigarette_weight or 0) }}</div>
+                            <div class="kpi-label">Cigarette Wt (g)</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="kpi-card p-2">
+                            <div class="kpi-value">{{ "%.4f"|format(result.optimized_tobacco_weight or 0) }}</div>
+                            <div class="kpi-label">Tobacco Wt (g)</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="kpi-card p-2">
+                            <div class="kpi-value">{{ "%.2f"|format(result.variance_percent or 0) }}%</div>
+                            <div class="kpi-label">Variance</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">No results available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if result %}
+<div class="card mb-3">
+    <div class="card-header">Optimized Key Variables</div>
+    <div class="card-body">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Original</th>
+                    <th>Optimized</th>
+                    <th>Delta</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in variables %}
+                <tr>
+                    <td><strong>{{ v.name }}</strong></td>
+                    <td>{{ "%.4f"|format(v.original) }}</td>
+                    <td>{{ "%.4f"|format(v.optimized) }}</td>
+                    <td>{{ "%.4f"|format(v.delta) }}</td>
+                    <td>
+                        {% if v.within_limit %}
+                        <span class="badge bg-success">OK</span>
+                        {% else %}
+                        <span class="badge bg-danger">Exceeded</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if limits %}
+<div class="card">
+    <div class="card-header">Tolerance Limits Applied</div>
+    <div class="card-body">
+        <table class="table table-sm table-bordered mb-0">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lim in limits %}
+                <tr>
+                    <td>{{ lim.parameter_name }}</td>
+                    <td>{{ lim.min_value }}</td>
+                    <td>{{ lim.max_value }}</td>
+                    <td><span class="badge bg-secondary">{{ 'FG-Specific' if lim.fg_code_id else 'Global' }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

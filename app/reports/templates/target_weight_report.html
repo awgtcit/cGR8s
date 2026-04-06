@@ -1,0 +1,32 @@
+{% extends "base_report.html" %}
+{% block content %}
+<table class="meta-table">
+    <tr><td class="label">Period:</td><td>{{ date_from }} – {{ date_to }}</td></tr>
+    {% if fg_filter %}<tr><td class="label">FG Code:</td><td>{{ fg_filter }}</td></tr>{% endif %}
+    <tr><td class="label">Records:</td><td>{{ results|length }}</td></tr>
+</table>
+
+<h2>Target Weight Calculations</h2>
+<table class="data">
+    <thead>
+        <tr>
+            <th>Order #</th><th>FG Code</th>
+            <th>Cig. Wt (g)</th><th>Tob. Wt (g)</th><th>Std Deviation</th>
+            <th>Target Weight (g)</th><th>Calculated</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr>
+            <td>{{ r.process_order_number }}</td>
+            <td>{{ r.fg_code }}</td>
+            <td>{{ "%.4f"|format(r.cigarette_weight) }}</td>
+            <td>{{ "%.4f"|format(r.tobacco_weight) }}</td>
+            <td>{{ "%.4f"|format(r.std_deviation) }}</td>
+            <td><strong>{{ "%.4f"|format(r.target_weight) }}</strong></td>
+            <td>{{ r.calculated_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

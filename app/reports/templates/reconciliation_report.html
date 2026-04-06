@@ -1,0 +1,65 @@
+{% extends "base_report.html" %}
+{% block content %}
+<table class="meta-table">
+    <tr><td class="label">Period:</td><td>{{ date_from }} – {{ date_to }}</td></tr>
+    {% if fg_filter %}<tr><td class="label">FG Code:</td><td>{{ fg_filter }}</td></tr>{% endif %}
+</table>
+
+<div class="kpi-row">
+    <div class="kpi-box"><div class="value">{{ summary.total_orders }}</div><div class="label">Orders</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.0f"|format(summary.total_planned) }}</div><div class="label">Planned (sticks)</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.0f"|format(summary.total_actual) }}</div><div class="label">Actual (sticks)</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.2f"|format(summary.avg_npl) }}%</div><div class="label">Avg NPL %</div></div>
+</div>
+
+<h2>Reconciliation Summary by FG Code</h2>
+<table class="data">
+    <thead>
+        <tr><th>FG Code</th><th>Brand</th><th>Orders</th><th>Planned</th><th>Actual</th><th>Variance</th><th>NPL %</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {% for r in reconciliation %}
+        <tr>
+            <td><strong>{{ r.fg_code }}</strong></td>
+            <td>{{ r.brand_family }}</td>
+            <td>{{ r.order_count }}</td>
+            <td>{{ "%.0f"|format(r.total_planned) }}</td>
+            <td>{{ "%.0f"|format(r.total_actual) }}</td>
+            <td>{{ "%.0f"|format(r.variance) }}</td>
+            <td>{{ "%.2f"|format(r.npl_pct) }}%</td>
+            <td>
+                {% if r.npl_pct <= 2.0 %}
+                <span class="badge badge-success">Good</span>
+                {% elif r.npl_pct <= 5.0 %}
+                <span class="badge badge-warning">Attention</span>
+                {% else %}
+                <span class="badge badge-danger">Critical</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if details %}
+<h2>Detailed Order Reconciliation</h2>
+<table class="data">
+    <thead>
+        <tr><th>Order #</th><th>FG Code</th><th>Planned</th><th>Actual</th><th>NPL %</th><th>QA</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {% for d in details %}
+        <tr>
+            <td>{{ d.process_order_number }}</td>
+            <td>{{ d.fg_code }}</td>
+            <td>{{ "%.0f"|format(d.planned) }}</td>
+            <td>{{ "%.0f"|format(d.actual) }}</td>
+            <td>{{ "%.2f"|format(d.npl_pct) }}%</td>
+            <td><span class="badge badge-{{ 'success' if d.qa_status == 'Approved' else 'warning' }}">{{ d.qa_status }}</span></td>
+            <td>{{ d.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

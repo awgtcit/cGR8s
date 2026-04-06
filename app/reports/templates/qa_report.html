@@ -1,0 +1,35 @@
+{% extends "base_report.html" %}
+{% block content %}
+<table class="meta-table">
+    <tr><td class="label">Period:</td><td>{{ date_from }} – {{ date_to }}</td></tr>
+    {% if fg_filter %}<tr><td class="label">FG Code:</td><td>{{ fg_filter }}</td></tr>{% endif %}
+    <tr><td class="label">Records:</td><td>{{ results|length }}</td></tr>
+</table>
+
+<div class="kpi-row">
+    <div class="kpi-box"><div class="value">{{ summary.total_analyses }}</div><div class="label">Analyses</div></div>
+    <div class="kpi-box"><div class="value">{{ summary.approved }}</div><div class="label">Approved</div></div>
+    <div class="kpi-box"><div class="value">{{ summary.rejected }}</div><div class="label">Rejected</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.1f"|format(summary.approval_rate) }}%</div><div class="label">Approval Rate</div></div>
+</div>
+
+<h2>QA Analyses</h2>
+<table class="data">
+    <thead>
+        <tr><th>Order #</th><th>FG Code</th><th>Analyst</th><th>Status</th><th>Moisture %</th><th>PD</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr>
+            <td>{{ r.process_order_number }}</td>
+            <td>{{ r.fg_code }}</td>
+            <td>{{ r.analyst }}</td>
+            <td><span class="badge badge-{{ 'success' if r.status == 'Approved' else 'danger' if r.status == 'Rejected' else 'warning' }}">{{ r.status }}</span></td>
+            <td>{{ "%.2f"|format(r.moisture_pct) if r.moisture_pct else '—' }}</td>
+            <td>{{ "%.2f"|format(r.pressure_drop) if r.pressure_drop else '—' }}</td>
+            <td>{{ r.analysis_date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

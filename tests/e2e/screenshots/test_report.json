@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-04-02 12:40:29",
+  "base_url": "http://127.0.0.1:5053",
+  "total_issues": 6,
+  "critical": 1,
+  "warnings": 4,
+  "info": 1,
+  "issues": [
+    {
+      "severity": "WARNING",
+      "page": "FG Codes",
+      "description": "Expected 4 panels, found 0"
+    },
+    {
+      "severity": "CRITICAL",
+      "page": "FG Codes",
+      "description": "Load button not visible"
+    },
+    {
+      "severity": "WARNING",
+      "page": "FG Codes",
+      "description": "Load All button not visible"
+    },
+    {
+      "severity": "INFO",
+      "page": "FG Codes",
+      "description": "Calculate button disabled (no FG code selected)"
+    },
+    {
+      "severity": "WARNING",
+      "page": "Console",
+      "description": "[http://127.0.0.1:5053/] Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+    },
+    {
+      "severity": "WARNING",
+      "page": "Console",
+      "description": "[http://127.0.0.1:5053/nonexistent-page-12345] Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+    }
+  ],
+  "screenshots": [
+    "00_auth_success.png",
+    "01_login_page.png",
+    "02_dashboard.png",
+    "03_nav_404_master_data.png",
+    "03_nav_admin.png",
+    "03_nav_batch.png",
+    "03_nav_dashboard.png",
+    "03_nav_fg_codes.png",
+    "03_nav_master_data.png",
+    "03_nav_npl.png",
+    "03_nav_optimizer.png",
+    "03_nav_process_orders.png",
+    "03_nav_qa.png",
+    "03_nav_reports.png",
+    "03_nav_target_weight.png",
+    "04_fg_codes_after_load.png",
+    "04_fg_codes_final.png",
+    "04_fg_codes_initial.png",
+    "04_fg_codes_variables_filled.png",
+    "05_fg_create_form.png",
+    "06_po_create_form.png",
+    "06_process_orders.png",
+    "07_target_weight.png",
+    "08_npl.png",
+    "09_qa.png",
+    "09_qa_pending.png",
+    "10_optimizer.png",
+    "11_master_blends.png",
+    "11_master_calibration.png",
+    "11_master_physical_params.png",
+    "12_batch.png",
+    "12_batch_submit.png",
+    "13_reports.png",
+    "13_reports_generate.png",
+    "14_product_dev.png",
+    "15_admin_admin_index.png",
+    "15_admin_audit_trail.png",
+    "15_admin_system_config.png",
+    "16_responsive_desktop_full.png",
+    "16_responsive_desktop_laptop.png",
+    "16_responsive_mobile.png",
+    "16_responsive_tablet.png",
+    "17_error_404.png",
+    "fg_codes_loaded.png",
+    "fg_codes_redesigned.png"
+  ]
+}

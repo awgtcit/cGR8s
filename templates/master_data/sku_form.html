@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}{{ 'Edit' if sku else 'New' }} SKU{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.skus') }}">SKUs</a>
+<span class="separator">/</span>
+<span class="current">{{ 'Edit' if sku else 'New' }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-box-seam"></i> {{ 'Edit' if sku else 'New' }} SKU</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post"
+            action="{{ url_for('master_data.sku_edit', id=sku.id) if sku else url_for('master_data.sku_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if sku %}
+            <input type="hidden" name="row_version" value="{{ sku.row_version }}">
+            {% endif %}
+
+            {{ form_field('sku_code', 'SKU Code', data.get('sku_code', ''), required=true, errors=errors) }}
+            {{ form_field('description', 'Description', data.get('description', ''), errors=errors) }}
+            {{ form_field('nicotine', 'Nicotine', data.get('nicotine', ''), type='number', step='0.001', errors=errors)
+            }}
+            {{ form_field('ventilation', 'Ventilation', data.get('ventilation', ''), type='number', step='0.01',
+            errors=errors) }}
+            {{ form_field('pd_code', 'PD Code', data.get('pd_code', ''), errors=errors) }}
+            {{ form_field('cig_code', 'Cig Code', data.get('cig_code', ''), errors=errors) }}
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ 'checked' if
+                        data.get('is_active', sku.is_active if sku else true) }}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
+            </div>
+
+            {{ form_actions(url_for('master_data.skus')) }}
+        </form>
+    </div>
+</div>
+{% endblock %}

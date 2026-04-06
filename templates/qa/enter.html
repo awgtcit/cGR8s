@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions, select_field %}
+{% block title %}Enter QA Data{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('qa.index') }}">QA Workflow</a>
+<span class="separator">/</span>
+<span class="current">Enter Data</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-shield-check"></i> QA Entry – {{ po.process_order_number }}</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('qa.enter', process_order_id=po.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            {# ── Dates ──────────────────────────────────────── #}
+            <h6 class="mb-3"><i class="bi bi-calendar3 me-1"></i> Dates</h6>
+            <div class="row">
+                <div class="col-md-4">{{ form_field('qr_date', 'QR Date (D-)', data.get('qr_date', ''),
+                    type='date') }}</div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Prod. Date (D)</label>
+                        <input type="text" class="form-control"
+                            value="{{ po.process_date.strftime('%Y-%m-%d') if po.process_date else '' }}" disabled>
+                    </div>
+                </div>
+                <div class="col-md-4">{{ form_field('npl_date', 'NPL Date (D+1)', data.get('npl_date', ''),
+                    type='date') }}</div>
+            </div>
+
+            {# ── Reference Info (read-only from FG/PO) ──────── #}
+            <h6 class="mt-4 mb-3"><i class="bi bi-info-circle me-1"></i> Reference Info</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="mb-3"><label class="form-label">Process Order</label>
+                        <input type="text" class="form-control" value="{{ po.process_order_number }}" disabled>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3"><label class="form-label">SKU (FG Code)</label>
+                        <input type="text" class="form-control" value="{{ fg.fg_code if fg else '–' }}" disabled>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3"><label class="form-label">SKU Desc</label>
+                        <input type="text" class="form-control" value="{{ fg.brand if fg else '–' }}" disabled>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3"><label class="form-label">Blend</label>
+                        <input type="text" class="form-control" value="{{ fg.blend if fg else '–' }}" disabled>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Physical Measurements ──────────────────────── #}
+            <h6 class="mt-4 mb-3"><i class="bi bi-rulers me-1"></i> Physical Measurements</h6>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('total_cig_length', 'Total Cig. Length',
+                    data.get('total_cig_length', ''),
+                    type='number', step='0.001') }}</div>
+                <div class="col-md-3">{{ form_field('circumference_mean', 'Circumference Mean',
+                    data.get('circumference_mean', ''),
+                    type='number', step='0.001') }}</div>
+                <div class="col-md-3">{{ form_field('circumference_sd', 'Circumference SD', data.get('circumference_sd',
+                    ''),
+                    type='number', step='0.0001') }}</div>
+                <div class="col-md-3">{{ form_field('cig_dia', 'Cig Dia', data.get('cig_dia', ''),
+                    type='number', step='0.001') }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('plug_length', 'Plug Length', data.get('plug_length', ''),
+                    type='number', step='0.001') }}</div>
+                <div class="col-md-3">{{ form_field('w_ntm', 'W_NTM', data.get('w_ntm', ''),
+                    type='number', step='0.0001') }}</div>
+                <div class="col-md-3">{{ form_field('loose_shorts', 'Loose Shorts', data.get('loose_shorts', ''),
+                    type='number', step='0.01') }}</div>
+            </div>
+
+            {# ── Filter & Ventilation ───────────────────────── #}
+            <h6 class="mt-4 mb-3"><i class="bi bi-funnel me-1"></i> Filter & Ventilation</h6>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('tip_vf', 'TIP VF', data.get('tip_vf', ''),
+                    type='number', step='0.01') }}</div>
+                <div class="col-md-3">{{ form_field('tip_vf_sd', 'TIP Vf SD', data.get('tip_vf_sd', ''),
+                    type='number', step='0.0001') }}</div>
+                <div class="col-md-3">{{ form_field('filter_pd_mean', 'Filter PD Mean', data.get('filter_pd_mean', ''),
+                    type='number', step='0.001') }}</div>
+                <div class="col-md-3">{{ form_field('plug_wrap_cu', 'Plug Wrap CU', data.get('plug_wrap_cu', ''),
+                    type='number', step='0.01') }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('tow', 'TOW', data.get('tow', '')) }}</div>
+            </div>
+
+            {# ── Hardness & PDO ─────────────────────────────── #}
+            <h6 class="mt-4 mb-3"><i class="bi bi-diamond me-1"></i> Hardness & PDO</h6>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('cig_pdo', 'Cig PDO', data.get('cig_pdo', ''),
+                    type='number', step='0.001') }}</div>
+                <div class="col-md-3">{{ form_field('cig_hardness', 'Cig. Hardness', data.get('cig_hardness', ''),
+                    type='number', step='0.001') }}</div>
+                <div class="col-md-3">{{ form_field('cig_corr_hardness', 'Cig. Corr. Hardness',
+                    data.get('cig_corr_hardness', ''),
+                    type='number', step='0.001') }}</div>
+            </div>
+
+            {# ── Filling Power & Moisture ───────────────────── #}
+            <h6 class="mt-4 mb-3"><i class="bi bi-moisture me-1"></i> Filling Power & Moisture</h6>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('pack_ov', 'Pack OV', data.get('pack_ov', ''),
+                    type='number', step='0.01') }}</div>
+                <div class="col-md-3">{{ form_field('lamina_cpi', 'Lamina CPI', data.get('lamina_cpi', ''),
+                    type='number', step='0.01') }}</div>
+                <div class="col-md-3">{{ form_field('filling_power', 'Filling Power', data.get('filling_power', ''),
+                    type='number', step='0.01') }}</div>
+                <div class="col-md-3">{{ form_field('filling_power_corr', 'Filling Power Corr',
+                    data.get('filling_power_corr', ''),
+                    type='number', step='0.01') }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('maker_moisture', 'Maker Moisture', data.get('maker_moisture', ''),
+                    type='number', step='0.01') }}</div>
+                <div class="col-md-3">{{ form_field('ssi', 'SSI', data.get('ssi', ''),
+                    type='number', step='0.01') }}</div>
+                <div class="col-md-3">{{ form_field('pan_pct', 'PAN%', data.get('pan_pct', ''),
+                    type='number', step='0.01') }}</div>
+            </div>
+
+            {# ── Other ──────────────────────────────────────── #}
+            <h6 class="mt-4 mb-3"><i class="bi bi-card-list me-1"></i> Other</h6>
+            <div class="row">
+                <div class="col-md-3">{{ select_field('mc', 'MC (Machine)', mc_options, data.get('mc', ''),
+                    placeholder='-- Select Machine --') }}</div>
+                <div class="col-md-3">{{ select_field('company', 'Company', company_options, data.get('company', ''),
+                    placeholder='-- Select Company --') }}</div>
+            </div>
+
+            {# ── Notes ──────────────────────────────────────── #}
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" id="notes"
+                            rows="3">{{ data.get('notes', '') }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            {{ form_actions(url_for('qa.pending'), submit_label='Submit QA Data', submit_icon='bi-check-lg') }}
+        </form>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<style>
+    /* ── Tom Select – cGR8s theme override ── */
+    .ts-wrapper .ts-control {
+        font-size: 0.875rem;
+        border-color: var(--cgr-border);
+        border-radius: var(--radius-sm);
+        padding: 6px 12px;
+        min-height: 38px;
+        background: var(--cgr-surface);
+        box-shadow: none;
+    }
+
+    .ts-wrapper.focus .ts-control {
+        border-color: var(--cgr-primary);
+        box-shadow: 0 0 0 3px rgba(13, 107, 60, 0.12);
+    }
+
+    .ts-wrapper .ts-control input {
+        font-size: 0.875rem;
+        color: var(--cgr-text);
+    }
+
+    .ts-wrapper .ts-control .item {
+        color: var(--cgr-text);
+    }
+
+    .ts-dropdown {
+        font-size: 0.875rem;
+        border-color: var(--cgr-border);
+        border-radius: var(--radius-sm);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .ts-dropdown .option {
+        padding: 8px 12px;
+        color: var(--cgr-text);
+    }
+
+    .ts-dropdown .option:hover,
+    .ts-dropdown .active {
+        background: var(--cgr-primary-soft);
+        color: var(--cgr-primary);
+    }
+
+    .ts-wrapper .ts-control::placeholder {
+        color: var(--cgr-text-muted);
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('#mc, #company').forEach(function (el) {
+            new TomSelect(el, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' }
+            });
+        });
+    });
+</script>
+{% endblock %}

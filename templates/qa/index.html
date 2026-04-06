@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import pagination, status_badge, empty_state %}
+{% block title %}QA Workflow{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">QA Workflow</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-shield-check"></i> QA Workflow</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('qa.data_grid') }}" class="btn btn-primary"><i class="bi bi-grid-3x3-gap"></i> Data Grid</a>
+        <a href="{{ url_for('qa.pending') }}" class="btn btn-outline-primary"><i class="bi bi-clock"></i> Pending QA</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Process Order</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qa in items %}
+                    <tr>
+                        <td><a href="{{ url_for('qa.detail', id=qa.id) }}">{{ qa.id[:8] }}...</a></td>
+                        <td>{{ po_lookup.get(qa.process_order_id, qa.process_order_id) }}</td>
+                        <td>{{ status_badge(qa.status) }}</td>
+                        <td>{{ qa.created_at|date if qa.created_at else '–' }}</td>
+                        <td><a href="{{ url_for('qa.detail', id=qa.id) }}" class="btn btn-sm btn-outline-primary"><i
+                                    class="bi bi-eye"></i></a></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">{{ empty_state('No QA analyses recorded') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if pages is defined and pages > 1 %}
+    <div class="card-footer">{{ pagination(page, pages, 'qa.index') }}</div>
+    {% endif %}
+</div>
+{% endblock %}

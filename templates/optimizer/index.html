@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import pagination, empty_state %}
+{% block title %}Product Run Optimizer{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">Optimizer</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-sliders"></i> Product Run Optimizer</h2>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Process Order</th>
+                        <th>Method</th>
+                        <th>Within Tolerance</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in items %}
+                    <tr>
+                        <td>{{ run.id[:8] }}...</td>
+                        <td>{{ po_lookup.get(run.process_order_id, run.process_order_id) }}</td>
+                        <td>{{ run.method }}</td>
+                        <td>
+                            {% if run.is_verified %}<span class="badge bg-success">Yes</span>
+                            {% else %}<span class="badge bg-danger">No</span>{% endif %}
+                        </td>
+                        <td>{{ run.created_at|date if run.created_at else '–' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">{{ empty_state('No optimizer runs yet') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if pages is defined and pages > 1 %}
+    <div class="card-footer">{{ pagination(page, pages, 'optimizer.index') }}</div>
+    {% endif %}
+</div>
+{% endblock %}

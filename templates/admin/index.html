@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Administration{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">Admin</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-gear"></i> Administration</h2>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <i class="bi bi-sliders2 fs-1 text-primary"></i>
+                <h5 class="mt-2">System Configuration</h5>
+                <p class="text-muted small">Manage Auth-App URL, default parameters, and application settings.</p>
+                <a href="{{ url_for('admin.system_config') }}" class="btn btn-outline-primary mt-auto">Manage</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <i class="bi bi-journal-text fs-1 text-primary"></i>
+                <h5 class="mt-2">Audit Trail</h5>
+                <p class="text-muted small">View all user actions, data changes, and system events.</p>
+                <a href="{{ url_for('admin.audit_trail') }}" class="btn btn-outline-primary mt-auto">View Logs</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <i class="bi bi-database fs-1 text-primary"></i>
+                <h5 class="mt-2">Master Data</h5>
+                <p class="text-muted small">Manage blends, physical parameters, calibration constants, and lookups.</p>
+                <a href="{{ url_for('master_data.blends') }}" class="btn btn-outline-primary mt-auto">Manage</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}Target Weight Calculator{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('target_weight.index') }}">Target Weight</a>
+<span class="separator">/</span>
+<span class="current">Calculate</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-calculator"></i> Target Weight – {{ po.process_order_number }}</h2>
+</div>
+
+<div class="row g-3">
+    {# ── Column 1: SKU Details + Constants ─────────────────── #}
+    <div class="col-lg-3 col-md-4">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-info-circle"></i> FG Code Info</div>
+            <div class="card-body p-2">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted" style="width:40%">FG Code</th>
+                        <td>{{ fg.fg_code if fg else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Brand</th>
+                        <td>{{ fg.brand if fg else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Format</th>
+                        <td>{{ fg.format if fg else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Blend</th>
+                        <td>{{ fg.blend_code if fg else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Cig Code</th>
+                        <td>{{ fg.cig_code if fg else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Plug Len</th>
+                        <td>{{ fg.plug_length if fg else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">C_PLG</th>
+                        <td>{{ defaults.get('c_plg', '–') }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">NTM Wt</th>
+                        <td>{{ defaults.get('ntm_wt_mean', '–') }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><i class="bi bi-sliders"></i> Constants</div>
+            <div class="card-body p-2">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted" style="width:40%">α (Alpha)</th>
+                        <td>{{ defaults.get('alpha', '–') }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">β (Beta)</th>
+                        <td>{{ defaults.get('beta', '–') }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">γ (Gamma)</th>
+                        <td>{{ defaults.get('gamma', '–') }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">δ (Delta)</th>
+                        <td>{{ defaults.get('delta', '–') }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">N_tgt</th>
+                        <td>{{ defaults.get('n_tgt', '–') }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ── Column 2: Key Variables Form ──────────────────────── #}
+    <div class="col-lg-5 col-md-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-input-cursor-text"></i> Key Variables</div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('target_weight.calculate', process_order_id=po.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {# Hidden calibration constants #}
+                    <input type="hidden" name="alpha" value="{{ defaults.get('alpha', 0) }}">
+                    <input type="hidden" name="beta" value="{{ defaults.get('beta', 0) }}">
+                    <input type="hidden" name="gamma" value="{{ defaults.get('gamma', 0) }}">
+                    <input type="hidden" name="delta" value="{{ defaults.get('delta', 0) }}">
+                    <input type="hidden" name="n_tgt" value="{{ defaults.get('n_tgt', 0) }}">
+
+                    <div class="row">
+                        <div class="col-md-6">{{ form_field('n_bld', 'N_BLD (Blend Nicotine)', data.get('n_bld', ''),
+                            type='number', step='0.0001', required=true, errors=errors) }}</div>
+                        <div class="col-md-6">{{ form_field('p_cu', 'P_CU (Paper CU)', data.get('p_cu', ''),
+                            type='number', step='0.0001', required=true, errors=errors) }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{{ form_field('t_vnt', 'T_VNT (Tip Ventilation %)', data.get('t_vnt', ''),
+                            type='number', step='0.0001', required=true, errors=errors) }}</div>
+                        <div class="col-md-6">{{ form_field('f_pd', 'F_PD (Filter PD)', data.get('f_pd', ''),
+                            type='number', step='0.0001', required=true, errors=errors) }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{{ form_field('m_ip', 'M_IP (Maker Moisture %)', data.get('m_ip', ''),
+                            type='number', step='0.0001', required=true, errors=errors) }}</div>
+                        <div class="col-md-6">{{ form_field('w_ntm', 'W_NTM (NTM Weight)', data.get('w_ntm',
+                            defaults.get('ntm_wt_mean', 0)),
+                            type='number', step='0.0001', required=true, errors=errors) }}</div>
+                    </div>
+
+                    {{ form_actions(url_for('target_weight.index'), 'Calculate', 'bi-calculator') }}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ── Column 3: Last Calculation Results ───────────────── #}
+    <div class="col-lg-4 col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Last Calculation
+                {% if last_calc %}
+                <small class="text-muted float-end">{{ last_calc.calculated_at.strftime('%Y-%m-%d %H:%M') if
+                    last_calc.calculated_at else '' }}</small>
+                {% endif %}
+            </div>
+            <div class="card-body p-2">
+                {% if last_calc %}
+                <h6 class="text-muted mb-2">Interim Results</h6>
+                <table class="table table-sm table-borderless mb-2">
+                    <tr>
+                        <th class="text-muted" style="width:55%">Stage 1 Dilution</th>
+                        <td>{{ '%.3f'|format(last_calc.stage1_dilution) if last_calc.stage1_dilution is not none else
+                            '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Stage 2 Dilution</th>
+                        <td>{{ '%.3f'|format(last_calc.stage2_dilution) if last_calc.stage2_dilution is not none else
+                            '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Total Dilution</th>
+                        <td>{{ '%.3f'|format(last_calc.total_dilution) if last_calc.total_dilution is not none else '–'
+                            }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Filtration %</th>
+                        <td>{{ '%.3f'|format(last_calc.filtration_pct) if last_calc.filtration_pct is not none else '–'
+                            }}</td>
+                    </tr>
+                </table>
+                <h6 class="text-muted mb-2">Pacifying Nicotine Demand</h6>
+                <table class="table table-sm table-borderless mb-2">
+                    <tr>
+                        <th class="text-muted" style="width:55%">Stage 1</th>
+                        <td>{{ '%.3f'|format(last_calc.stage1_pacifying_nicotine_demand) if
+                            last_calc.stage1_pacifying_nicotine_demand is not none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Stage 2</th>
+                        <td>{{ '%.3f'|format(last_calc.stage2_pacifying_nicotine_demand) if
+                            last_calc.stage2_pacifying_nicotine_demand is not none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Total</th>
+                        <td>{{ '%.3f'|format(last_calc.total_pacifying_nicotine_demand) if
+                            last_calc.total_pacifying_nicotine_demand is not none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Filtration %</th>
+                        <td>{{ '%.3f'|format(last_calc.total_filtration_pct) if last_calc.total_filtration_pct is not
+                            none else '–' }}</td>
+                    </tr>
+                </table>
+                <hr class="my-2">
+                <h6 class="text-muted mb-2">Output Weights</h6>
+                <table class="table table-sm table-borderless mb-2">
+                    <tr>
+                        <th class="text-muted" style="width:55%">W_dry</th>
+                        <td>{{ '%.3f'|format(last_calc.w_dry) if last_calc.w_dry is not none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">W_tob</th>
+                        <td>{{ '%.3f'|format(last_calc.w_tob) if last_calc.w_tob is not none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">W_cig</th>
+                        <td class="fw-bold">{{ '%.3f'|format(last_calc.w_cig) if last_calc.w_cig is not none else '–' }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">W_NTM</th>
+                        <td>{{ '%.3f'|format(last_calc.w_ntm) if last_calc.w_ntm is not none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">TW</th>
+                        <td class="fw-bold text-primary">{{ '%.3f'|format(last_calc.tw) if last_calc.tw is not none else
+                            '–' }}</td>
+                    </tr>
+                </table>
+                <hr class="my-2">
+                <h6 class="text-muted mb-2">Input Snapshot</h6>
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted" style="width:55%">N_BLD</th>
+                        <td>{{ last_calc.input_n_bld }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">P_CU</th>
+                        <td>{{ last_calc.input_p_cu }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">T_VNT</th>
+                        <td>{{ last_calc.input_t_vnt }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">F_PD</th>
+                        <td>{{ last_calc.input_f_pd }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">M_IP</th>
+                        <td>{{ last_calc.input_m_ip }}</td>
+                    </tr>
+                </table>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size:2rem"></i>
+                    <p class="mt-2 mb-0">No previous calculation</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

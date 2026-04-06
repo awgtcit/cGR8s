@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions, form_section %}
+{% block title %}{{ 'Edit' if param else 'New' }} Physical Parameter{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.physical_params') }}">Physical Parameters</a>
+<span class="separator">/</span>
+<span class="current">{{ 'Edit' if param else 'New' }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-rulers"></i> {{ 'Edit' if param else 'New' }} Physical Parameter</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post"
+            action="{{ url_for('master_data.physical_param_edit', id=param.id) if param else url_for('master_data.physical_param_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if param %}
+            <input type="hidden" name="row_version" value="{{ param.row_version }}">
+            {% endif %}
+
+            {% call form_section('FG Code Selection', 'upc-scan') %}
+            <div class="mb-3">
+                <label class="form-label">FG Code <span class="text-danger">*</span></label>
+                <select name="fg_code_id" class="form-select" required>
+                    <option value="">-- Select FG Code --</option>
+                    {% for fg in fg_codes %}
+                    <option value="{{ fg.id }}" {{ 'selected' if data.get('fg_code_id', (param.fg_code_id if param
+                        else '' ))|string==fg.id|string }}>{{ fg.fg_code }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors and errors.get('fg_code_id') %}
+                <div class="invalid-feedback d-block">{{ errors.fg_code_id }}</div>
+                {% endif %}
+            </div>
+            {% endcall %}
+
+            {% call form_section('Key Variables', 'sliders') %}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('p_cu', 'P_CU', data.get('p_cu', param.p_cu if param else ''), type='number',
+                    step='0.000001', required=true, errors=errors) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('t_vnt', 'T_VNT', data.get('t_vnt', param.t_vnt if param else ''), type='number',
+                    step='0.000001', required=true, errors=errors) }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('f_pd', 'F_PD', data.get('f_pd', param.f_pd if param else ''), type='number',
+                    step='0.000001', errors=errors) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('m_ip', 'M_IP', data.get('m_ip', param.m_ip if param else ''), type='number',
+                    step='0.000001', errors=errors) }}
+                </div>
+            </div>
+            {% endcall %}
+
+            {% call form_section('Dimensions', 'rulers') %}
+            <div class="row">
+                <div class="col-md-4">
+                    {{ form_field('cig_length', 'Cig Length', data.get('cig_length', param.cig_length if param else ''),
+                    type='number', step='0.01', errors=errors) }}
+                </div>
+                <div class="col-md-4">
+                    {{ form_field('tobacco_rod_length', 'Tobacco Rod Length', data.get('tobacco_rod_length',
+                    param.tobacco_rod_length if param else ''), type='number', step='0.01', errors=errors) }}
+                </div>
+                <div class="col-md-4">
+                    {{ form_field('filter_length', 'Filter Length', data.get('filter_length', param.filter_length if
+                    param else ''), type='number', step='0.01', errors=errors) }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('plug_length', 'Plug Length', data.get('plug_length', param.plug_length if param else
+                    ''), type='number', step='0.01', errors=errors) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('c_plg', 'C_PLG', data.get('c_plg', param.c_plg if param else ''), type='number',
+                    step='0.000001', errors=errors) }}
+                </div>
+            </div>
+            {% endcall %}
+
+            {{ form_actions(url_for('master_data.physical_params')) }}
+        </form>
+    </div>
+</div>
+{% endblock %}

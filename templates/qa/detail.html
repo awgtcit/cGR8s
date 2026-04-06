@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import status_badge %}
+{% block title %}QA Detail{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('qa.index') }}">QA Workflow</a>
+<span class="separator">/</span>
+<span class="current">Detail</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-shield-check"></i> QA Analysis</h2>
+    <div class="d-flex gap-2">
+        {% if qa.status == 'pending_review' %}
+        <form method="post" action="{{ url_for('qa.approve', id=qa.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Approve</button>
+        </form>
+        <form method="post" action="{{ url_for('qa.reject', id=qa.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">QA Analysis Details</div>
+    <div class="card-body">
+        <p><strong>Status:</strong> {{ status_badge(qa.status) }}</p>
+        <p><strong>Process Order:</strong> {{ qa.process_order_id }}</p>
+        <p><strong>Created:</strong> {{ qa.created_at|date if qa.created_at else '–' }}</p>
+    </div>
+</div>
+{% endblock %}

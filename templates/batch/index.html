@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, status_badge, empty_state %}
+{% block title %}Batch Processing{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">Batch Processing</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-collection"></i> Batch Jobs</h2>
+    <a href="{{ url_for('batch.submit') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Submit New Job</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        {{ search_bar('batch.index') }}
+    </div>
+    <div class="card-body p-0">
+
+        {% if active_jobs %}
+        <div class="alert alert-info mx-3 mt-3">
+            <i class="bi bi-hourglass-split"></i> <strong>{{ active_jobs }} active job(s)</strong> currently processing.
+        </div>
+        {% endif %}
+
+        {% if jobs %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr hx-get="{{ url_for('batch.status', job_id=job.id) }}"
+                        hx-trigger="every 5s[this.querySelector('.badge-processing')]" hx-swap="outerHTML">
+                        <td><code>{{ job.id[:8] }}…</code></td>
+                        <td><span class="badge bg-info">{{ job.job_type }}</span></td>
+                        <td>{{ status_badge(job.status) }}</td>
+                        <td>
+                            <div class="progress" style="width:120px;height:18px;">
+                                {% set pct = ((job.completed_items or 0) / (job.total_items or 1) * 100)|int %}
+                                <div class="progress-bar bg-success" style="width:{{ pct }}%">{{ pct }}%</div>
+                            </div>
+                        </td>
+                        <td>{{ job.created_at.strftime('%Y-%m-%d %H:%M') if job.created_at }}</td>
+                        <td><a href="{{ url_for('batch.detail', job_id=job.id) }}"
+                                class="btn btn-sm btn-outline-primary">Details</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        {{ empty_state('No batch jobs found', 'Submit a new batch job to get started.') }}
+        {% endif %}
+    </div>
+    {% if jobs and total_pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, total_pages, 'batch.index') }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

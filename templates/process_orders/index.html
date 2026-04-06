@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, status_badge, empty_state %}
+{% block title %}Process Orders{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">Process Orders</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Target Weight chip ────────────────────────────── */
+    .tw-chip {
+        display: inline-flex;
+        align-items: center;
+        background: var(--cgr-primary-soft);
+        color: var(--cgr-primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+        padding: 2px 8px;
+        border-radius: 6px;
+        letter-spacing: -0.01em;
+    }
+
+    /* ── Enhanced PO Row ───────────────────────────────── */
+    .po-code {
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+        font-size: 0.8rem;
+        color: var(--cgr-text-muted);
+    }
+
+    /* ── Action group ──────────────────────────────────── */
+    .action-group {
+        display: flex;
+        gap: 4px;
+    }
+
+    .action-group .btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+
+    .action-group .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* ── Mobile responsive ─────────────────────────────── */
+    @media (max-width: 767.98px) {
+        .hide-mobile {
+            display: none !important;
+        }
+
+        .po-row-mobile {
+            display: block !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-clipboard-data"></i> Process Orders</h2>
+    <a href="{{ url_for('process_orders.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New Process Order
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="table-toolbar">
+            <div class="toolbar-left">
+                {{ search_bar('process_orders.index', search, 'Search by order number...') }}
+            </div>
+            <div class="toolbar-right">
+                <form method="get" action="{{ url_for('process_orders.index') }}" class="d-flex gap-2">
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()"
+                        style="min-width:140px;">
+                        <option value="">All Statuses</option>
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>FG Code</th>
+                        <th class="hide-mobile">Blend</th>
+                        <th class="hide-mobile">Process Date</th>
+                        <th>Status</th>
+                        <th class="hide-mobile">Target Wt</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in items %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('process_orders.detail', id=po.id) }}" class="fw-semibold">{{
+                                po.process_order_number }}</a>
+                            <div class="d-md-none text-muted" style="font-size:0.72rem">{{ po.process_date|date if
+                                po.process_date else '' }}</div>
+                        </td>
+                        <td><span class="po-code">{{ fg_lookup.get(po.fg_code_id, po.fg_code_id) }}</span></td>
+                        <td class="hide-mobile">{{ blend_lookup.get(po.fg_code_id, '–') or '–' }}</td>
+                        <td class="hide-mobile">{{ po.process_date|date if po.process_date else '–' }}</td>
+                        <td>{{ status_badge(po.status) }}</td>
+                        <td class="hide-mobile">
+                            {% if po.id in tw_values %}
+                            <span class="tw-chip">{{ "%.3f"|format(tw_values[po.id]) }} mg</span>
+                            {% else %}
+                            <span class="text-muted" style="font-size:0.75rem">–</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-group">
+                                <a href="{{ url_for('process_orders.detail', id=po.id) }}"
+                                    class="btn btn-sm btn-outline-primary" title="View details"><i
+                                        class="bi bi-eye"></i></a>
+                                <a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}"
+                                    class="btn btn-sm btn-outline-success" title="Calculate target weight"><i
+                                        class="bi bi-calculator"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7">
+                            {{ empty_state('No process orders found', url_for('process_orders.create'), 'Create Process
+                            Order') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if pages is defined and pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, pages, 'process_orders.index', q=search, status=status_filter) }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

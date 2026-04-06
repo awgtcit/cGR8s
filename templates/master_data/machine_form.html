@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}{{ 'Edit' if machine else 'New' }} Machine{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.machines') }}">Machines</a>
+<span class="separator">/</span>
+<span class="current">{{ 'Edit' if machine else 'New' }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-gear-wide-connected"></i> {{ 'Edit' if machine else 'New' }} Machine</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post"
+            action="{{ url_for('master_data.machine_edit', id=machine.id) if machine else url_for('master_data.machine_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if machine %}
+            <input type="hidden" name="row_version" value="{{ machine.row_version }}">
+            {% endif %}
+
+            {{ form_field('machine_code', 'Machine Code', data.get('machine_code', ''), required=true, errors=errors) }}
+            {{ form_field('description', 'Description', data.get('description', ''), errors=errors) }}
+            {{ form_field('plant', 'Plant', data.get('plant', ''), errors=errors) }}
+            {{ form_field('format_type', 'Format', data.get('format_type', ''), errors=errors) }}
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ 'checked' if
+                        data.get('is_active', machine.is_active if machine else true) }}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
+            </div>
+
+            {{ form_actions(url_for('master_data.machines')) }}
+        </form>
+    </div>
+</div>
+{% endblock %}

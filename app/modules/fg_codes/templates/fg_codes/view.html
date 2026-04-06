@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% block title %}FG Code: {{ fg.fg_code }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('fg_codes.index') }}">FG Codes</a>
+<span class="separator">/</span>
+<span class="current">{{ fg.fg_code }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .excel-table {
+        font-size: 0.82rem;
+    }
+
+    .excel-table th {
+        background: #1b4332;
+        color: #fff;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 6px 12px;
+    }
+
+    .excel-table td {
+        padding: 5px 12px;
+        white-space: nowrap;
+    }
+
+    .excel-table tr:nth-child(even) td {
+        background: #f8f9fa;
+    }
+
+    .section-header td {
+        background: #2d6a4f !important;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .param-label {
+        color: #555;
+        font-weight: 500;
+        min-width: 200px;
+    }
+
+    .param-value {
+        font-weight: 600;
+        color: #1b4332;
+        text-align: right;
+    }
+
+    .param-limit {
+        color: #666;
+        text-align: right;
+        font-size: 0.78rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-upc"></i> {{ fg.fg_code }} — {{ fg.brand or '' }}</h2>
+    <a href="{{ url_for('fg_codes.index') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to FG Codes
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- General Info -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle"></i> General Information</div>
+            <div class="card-body p-0">
+                <table class="table table-sm excel-table mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="param-label">FG Code</td>
+                            <td class="param-value">{{ fg.fg_code }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Brand</td>
+                            <td class="param-value">{{ fg.brand or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">GTIN</td>
+                            <td class="param-value">{{ fg.fg_gtin or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Format</td>
+                            <td class="param-value">{{ fg.format or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Tow Used</td>
+                            <td class="param-value">{{ fg.tow_used or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Filter Code</td>
+                            <td class="param-value">{{ fg.filter_code or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Filter Description</td>
+                            <td class="param-value">{{ fg.filter_desc or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Cig Code</td>
+                            <td class="param-value">{{ fg.cig_code or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Family Name</td>
+                            <td class="param-value">{{ fg.family_name or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Active</td>
+                            <td class="param-value">{{ 'Yes' if fg.is_active else 'No' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blend Details -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-layers"></i> Blend & Physical Parameters</div>
+            <div class="card-body p-0">
+                <table class="table table-sm excel-table mb-0">
+                    <tbody>
+                        <tr class="section-header">
+                            <td colspan="2">Blend</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Blend Code</td>
+                            <td class="param-value">{{ fg.blend_code or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Blend</td>
+                            <td class="param-value">{{ fg.blend or '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Blend GTIN</td>
+                            <td class="param-value">{{ fg.blend_gtin or '–' }}</td>
+                        </tr>
+                        <tr class="section-header">
+                            <td colspan="2">Physical</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Cig Length</td>
+                            <td class="param-value">{{ fg.cig_length if fg.cig_length is not none else '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Tobacco Rod Length</td>
+                            <td class="param-value">{{ fg.tobacco_rod_length if fg.tobacco_rod_length is not none else
+                                '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Filter Length</td>
+                            <td class="param-value">{{ fg.filter_length if fg.filter_length is not none else '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Plug Length</td>
+                            <td class="param-value">{{ fg.plug_length if fg.plug_length is not none else '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">C PLG (Cuts)</td>
+                            <td class="param-value">{{ fg.c_plg if fg.c_plg is not none else '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Plug Wrap CU</td>
+                            <td class="param-value">{{ fg.plug_wrap_cu if fg.plug_wrap_cu is not none else '–' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">Target Nicotine</td>
+                            <td class="param-value">{{ fg.target_nic if fg.target_nic is not none else '–' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Targets & Limits (Full Excel view) -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-table"></i> Targets &amp; Limits (Complete)</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm excel-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th style="text-align:right">Target / Mean</th>
+                                <th style="text-align:right">Upper Limit</th>
+                                <th style="text-align:right">Lower Limit</th>
+                                <th style="text-align:right">SD Max</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="section-header">
+                                <td colspan="5">Circumference</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Circumference Mean</td>
+                                <td class="param-value">{{ fg.circumference_mean if fg.circumference_mean is not none
+                                    else '–' }}</td>
+                                <td class="param-limit">{{ fg.circumference_mean_ul if fg.circumference_mean_ul is not
+                                    none else '–' }}</td>
+                                <td class="param-limit">{{ fg.circumference_mean_ll if fg.circumference_mean_ll is not
+                                    none else '–' }}</td>
+                                <td class="param-limit">{{ fg.circumference_sd_max if fg.circumference_sd_max is not
+                                    none else '–' }}</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Cigarette PDO</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Cig PDO</td>
+                                <td class="param-value">{{ fg.cig_pdo if fg.cig_pdo is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.cig_pdo_ul if fg.cig_pdo_ul is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.cig_pdo_ll if fg.cig_pdo_ll is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Tip Ventilation</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Tip Ventilation</td>
+                                <td class="param-value">{{ fg.tip_ventilation if fg.tip_ventilation is not none else '–'
+                                    }}</td>
+                                <td class="param-limit">{{ fg.tip_ventilation_ul if fg.tip_ventilation_ul is not none
+                                    else '–' }}</td>
+                                <td class="param-limit">{{ fg.tip_ventilation_ll if fg.tip_ventilation_ll is not none
+                                    else '–' }}</td>
+                                <td class="param-limit">{{ fg.tip_ventilation_sd_max if fg.tip_ventilation_sd_max is not
+                                    none else '–' }}</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Weight</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">NTM Weight Mean</td>
+                                <td class="param-value">{{ fg.ntm_wt_mean if fg.ntm_wt_mean is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Cig Weight SD Max</td>
+                                <td class="param-value">{{ fg.cig_wt_sd_max if fg.cig_wt_sd_max is not none else '–' }}
+                                </td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Filter Pressure Drop</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Filter PD</td>
+                                <td class="param-value">{{ fg.filter_pd if fg.filter_pd is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.filter_pd_ul if fg.filter_pd_ul is not none else '–' }}
+                                </td>
+                                <td class="param-limit">{{ fg.filter_pd_ll if fg.filter_pd_ll is not none else '–' }}
+                                </td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Hardness</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Cig Hardness</td>
+                                <td class="param-value">{{ fg.cig_hardness if fg.cig_hardness is not none else '–' }}
+                                </td>
+                                <td class="param-limit">{{ fg.cig_hardness_ul if fg.cig_hardness_ul is not none else '–'
+                                    }}</td>
+                                <td class="param-limit">{{ fg.cig_hardness_ll if fg.cig_hardness_ll is not none else '–'
+                                    }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Corrected Hardness</td>
+                                <td class="param-value">{{ fg.cig_corrected_hardness if fg.cig_corrected_hardness is not
+                                    none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Loose Shorts Max</td>
+                                <td class="param-value">{{ fg.loose_shorts_max if fg.loose_shorts_max is not none else
+                                    '–' }}</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Filter</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Filter Weight</td>
+                                <td class="param-value">{{ fg.filter_weight if fg.filter_weight is not none else '–' }}
+                                </td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Moisture</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">C48 Moisture</td>
+                                <td class="param-value">{{ fg.c48_moisture if fg.c48_moisture is not none else '–' }}
+                                </td>
+                                <td class="param-limit">{{ fg.c48_moisture_ul if fg.c48_moisture_ul is not none else '–'
+                                    }}</td>
+                                <td class="param-limit">{{ fg.c48_moisture_ll if fg.c48_moisture_ll is not none else '–'
+                                    }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Maker Moisture</td>
+                                <td class="param-value">{{ fg.maker_moisture if fg.maker_moisture is not none else '–'
+                                    }}</td>
+                                <td class="param-limit">{{ fg.maker_moisture_ul if fg.maker_moisture_ul is not none else
+                                    '–' }}</td>
+                                <td class="param-limit">{{ fg.maker_moisture_ll if fg.maker_moisture_ll is not none else
+                                    '–' }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Pack OV &amp; SSI</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Pack OV</td>
+                                <td class="param-value">{{ fg.pack_ov if fg.pack_ov is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.pack_ov_ul if fg.pack_ov_ul is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.pack_ov_ll if fg.pack_ov_ll is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">SSI</td>
+                                <td class="param-value">{{ fg.ssi if fg.ssi is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.ssi_ul if fg.ssi_ul is not none else '–' }}</td>
+                                <td class="param-limit">{{ fg.ssi_ll if fg.ssi_ll is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+
+                            <tr class="section-header">
+                                <td colspan="5">Filling Power</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Lamina CPI</td>
+                                <td class="param-value">{{ fg.lamina_cpi if fg.lamina_cpi is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Filling Power</td>
+                                <td class="param-value">{{ fg.filling_power if fg.filling_power is not none else '–' }}
+                                </td>
+                                <td class="param-limit">{{ fg.filling_power_ul if fg.filling_power_ul is not none else
+                                    '–' }}</td>
+                                <td class="param-limit">{{ fg.filling_power_ll if fg.filling_power_ll is not none else
+                                    '–' }}</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Filling Power Corrected UL</td>
+                                <td class="param-value">{{ fg.filling_power_corrected_ul if
+                                    fg.filling_power_corrected_ul is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                            <tr>
+                                <td class="param-label">Pan % Max</td>
+                                <td class="param-value">{{ fg.pan_pct_max if fg.pan_pct_max is not none else '–' }}</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                                <td class="param-limit">–</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.param-value, .param-limit').forEach(function (el) {
+            var text = el.textContent.trim();
+            if (text === '–' || text === '') return;
+            var num = parseFloat(text);
+            if (!isNaN(num) && text.indexOf('.') !== -1 && text.length > 8) {
+                el.textContent = parseFloat(num.toFixed(3));
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}NPL Calculation{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('npl.index') }}">NPL</a>
+<span class="separator">/</span>
+<span class="current">Calculate</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Reference bar ─────────────────────────────────── */
+    .ref-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0;
+        background: var(--cgr-primary-soft);
+        border: 1px solid var(--cgr-primary);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+
+    .ref-cell {
+        flex: 1 1 0;
+        min-width: 120px;
+        text-align: center;
+        padding: 10px 8px;
+        border-right: 1px solid rgba(13, 107, 60, .15);
+    }
+
+    .ref-cell:last-child {
+        border-right: none;
+    }
+
+    .ref-label {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--cgr-primary);
+    }
+
+    .ref-label sub {
+        font-size: 0.7em;
+    }
+
+    .ref-val {
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--cgr-text);
+        margin-top: 2px;
+    }
+
+    /* ── Main grid layout ──────────────────────────────── */
+    .npl-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr minmax(220px, 1fr);
+        grid-template-rows: auto auto;
+        gap: 12px;
+        margin-right: 8px;
+    }
+
+    .npl-grid .npl-col-npl {
+        grid-column: 4;
+        grid-row: 1 / 3;
+    }
+
+    /* ── Section boxes ─────────────────────────────────── */
+    .npl-section {
+        border: 1px solid var(--cgr-border);
+        border-radius: var(--radius-lg);
+        position: relative;
+        padding: 20px 16px 16px;
+        background: var(--cgr-white);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .npl-section-title {
+        position: absolute;
+        top: -10px;
+        left: 16px;
+        background: var(--cgr-white);
+        padding: 0 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--cgr-primary);
+        letter-spacing: 0.02em;
+    }
+
+    /* ── Compact input rows ────────────────────────────── */
+    .npl-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .npl-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .npl-lbl {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--cgr-text);
+        min-width: 50px;
+        white-space: nowrap;
+    }
+
+    .npl-lbl sub {
+        font-size: 0.7em;
+    }
+
+    .npl-input {
+        flex: 1;
+        height: 34px;
+        border: 1px solid var(--cgr-border);
+        border-radius: var(--radius-sm);
+        padding: 4px 8px;
+        font-size: 0.82rem;
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+    }
+
+    .npl-input:focus {
+        border-color: var(--cgr-primary);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(13, 107, 60, .12);
+    }
+
+    .npl-input.pink {
+        background: #F5E6F0;
+    }
+
+    .npl-unit {
+        font-size: 0.75rem;
+        color: var(--cgr-text-muted);
+        min-width: 24px;
+    }
+
+    /* ── Collapsible sections ──────────────────────────── */
+    .npl-toggle {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .npl-toggle .bi-chevron-down {
+        transition: transform 0.2s;
+        font-size: 0.7rem;
+    }
+
+    .npl-toggle.collapsed .bi-chevron-down {
+        transform: rotate(-90deg);
+    }
+
+    .npl-hidden-fields {
+        overflow: hidden;
+        transition: max-height 0.25s ease;
+        max-height: 500px;
+    }
+
+    .npl-hidden-fields.collapsed {
+        max-height: 0;
+    }
+
+    /* ── Result section ────────────────────────────────── */
+    .npl-result-input {
+        flex: 1;
+        height: 34px;
+        border: 1px solid rgba(13, 107, 60, .2);
+        border-radius: var(--radius-sm);
+        padding: 4px 8px;
+        font-size: 0.82rem;
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+        background: #E8F5EE;
+        color: var(--cgr-primary);
+        font-weight: 600;
+    }
+
+    /* ── NPL result section stretches ──────────────────── */
+    .npl-section.npl-results {
+        border: 2px solid var(--cgr-primary);
+        justify-content: center;
+        padding: 20px 12px 12px;
+        height: auto;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .npl-results .npl-row {
+        gap: 4px;
+    }
+
+    .npl-results .npl-row .npl-lbl {
+        min-width: 28px;
+        flex-shrink: 0;
+    }
+
+    .npl-results .npl-row .npl-result-input {
+        min-width: 0;
+        width: 0;
+    }
+
+    .npl-results .npl-row .npl-unit {
+        flex-shrink: 0;
+        min-width: 18px;
+    }
+
+    .npl-results .npl-spacer {
+        flex: 0 0 16px;
+    }
+
+    /* ── Action bar ────────────────────────────────────── */
+    .npl-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 4px;
+    }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 991.98px) {
+        .npl-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .npl-grid .npl-col-npl {
+            grid-column: auto;
+            grid-row: auto;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .npl-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-graph-down"></i> NPL Calculation – {{ po.process_order_number }}</h2>
+</div>
+
+{# ── Order info bar ───────────────────────────────────────── #}
+<div class="d-flex gap-4 mb-3 text-muted" style="font-size:0.85rem;">
+    <span><strong>FG Code:</strong> {{ fg.fg_code if fg else '–' }}</span>
+    <span><strong>Blend:</strong> {{ fg.blend if fg and fg.blend else '–' }}</span>
+    <span><strong>Date:</strong> {{ po.process_date|date if po.process_date else '–' }}</span>
+</div>
+
+{# ── Reference Bar (top) ──────────────────────────────── #}
+<div class="ref-bar mb-3">
+    <div class="ref-cell">
+        <div class="ref-label">N<sub>BLD</sub></div>
+        <div class="ref-val">{{ '%.3f'|format(ref.n_bld) }}</div>
+    </div>
+    <div class="ref-cell">
+        <div class="ref-label">P<sub>CU</sub></div>
+        <div class="ref-val">{{ '%.3f'|format(ref.p_cu) }}</div>
+    </div>
+    <div class="ref-cell">
+        <div class="ref-label">T<sub>VNT</sub></div>
+        <div class="ref-val">{{ '%.3f'|format(ref.t_vnt) }}</div>
+    </div>
+    <div class="ref-cell">
+        <div class="ref-label">F<sub>PD</sub></div>
+        <div class="ref-val">{{ '%.3f'|format(ref.f_pd) }}</div>
+    </div>
+    <div class="ref-cell">
+        <div class="ref-label">M<sub>IP</sub></div>
+        <div class="ref-val">{{ '%.3f'|format(ref.m_ip) }}</div>
+    </div>
+</div>
+
+<form method="post" action="{{ url_for('npl.calculate', process_order_id=po.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="npl-grid">
+        {# ── Row 1, Col 1: Tobacco (mg) ───────────────────── #}
+        <div>
+            <div class="npl-section">
+                <span class="npl-section-title">Tobacco (mg)</span>
+                <div class="npl-row">
+                    <span class="npl-lbl">T<sub>ISS</sub></span>
+                    <input type="number" step="0.001" name="t_iss" class="npl-input pink"
+                        value="{{ data.get('t_iss', '') }}" placeholder="0">
+                </div>
+                <div id="tobacco-extra" class="npl-hidden-fields collapsed">
+                    <div class="npl-row">
+                        <span class="npl-lbl">T<sub>UN</sub></span>
+                        <input type="number" step="0.001" name="t_un" class="npl-input"
+                            value="{{ data.get('t_un', '') }}" placeholder="0">
+                    </div>
+                </div>
+                <div class="text-end mt-1">
+                    <small class="text-muted npl-toggle collapsed" onclick="toggleSection('tobacco-extra', this)"
+                        style="cursor:pointer"><i class="bi bi-chevron-down"></i> more</small>
+                </div>
+            </div>
+        </div>
+
+        {# ── Row 1, Col 2: Rejections (kg) ────────────────── #}
+        <div>
+            <div class="npl-section">
+                <span class="npl-section-title">Rejections (kg)</span>
+                <div class="npl-row">
+                    <span class="npl-lbl">L<sub>DST</sub></span>
+                    <input type="number" step="0.001" name="l_dst" class="npl-input pink"
+                        value="{{ data.get('l_dst', '') }}" placeholder="0">
+                </div>
+                <div id="rejections-extra" class="npl-hidden-fields collapsed">
+                    <div class="npl-row">
+                        <span class="npl-lbl">L<sub>WIN</sub></span>
+                        <input type="number" step="0.001" name="l_win" class="npl-input"
+                            value="{{ data.get('l_win', '') }}" placeholder="0">
+                    </div>
+                    <div class="npl-row">
+                        <span class="npl-lbl">L<sub>FLR</sub></span>
+                        <input type="number" step="0.001" name="l_flr" class="npl-input"
+                            value="{{ data.get('l_flr', '') }}" placeholder="0">
+                    </div>
+                    <div class="npl-row">
+                        <span class="npl-lbl">L<sub>SRT</sub></span>
+                        <input type="number" step="0.001" name="l_srt" class="npl-input"
+                            value="{{ data.get('l_srt', '') }}" placeholder="0">
+                    </div>
+                    <div class="npl-row">
+                        <span class="npl-lbl">L<sub>DT</sub></span>
+                        <input type="number" step="0.001" name="l_dt" class="npl-input"
+                            value="{{ data.get('l_dt', '') }}" placeholder="0">
+                    </div>
+                </div>
+                <div class="text-end mt-1">
+                    <small class="text-muted npl-toggle collapsed" onclick="toggleSection('rejections-extra', this)"
+                        style="cursor:pointer"><i class="bi bi-chevron-down"></i> more</small>
+                </div>
+            </div>
+        </div>
+
+        {# ── Row 1, Col 3: Cases ──────────────────────────── #}
+        <div>
+            <div class="npl-section">
+                <span class="npl-section-title">Cases</span>
+                <div class="npl-row">
+                    <span class="npl-lbl">N<sub>MC</sub></span>
+                    <input type="number" step="1" name="n_mc" class="npl-input pink" value="{{ data.get('n_mc', '') }}"
+                        placeholder="0">
+                </div>
+                <div class="npl-row">
+                    <span class="npl-lbl">N<sub>CG</sub></span>
+                    <input type="number" step="1" name="n_cg" class="npl-input pink" value="{{ data.get('n_cg', '') }}"
+                        placeholder="0">
+                </div>
+            </div>
+        </div>
+
+        {# ── Row 1-2, Col 4: NPL Results (spans 2 rows) ──── #}
+        <div class="npl-col-npl">
+            <div class="npl-section npl-results">
+                <span class="npl-section-title">NPL</span>
+                <div class="npl-row">
+                    <input type="text" class="npl-result-input" readonly tabindex="-1" id="npl_pct_display"
+                        value="{{ '%.6f'|format(npl_result.npl_pct) if npl_result else '' }}" placeholder="–">
+                    <span class="npl-unit">%</span>
+                </div>
+                <div class="npl-row">
+                    <input type="text" class="npl-result-input" readonly tabindex="-1" id="npl_kg_display"
+                        value="{{ '%.6f'|format(npl_result.npl_kg) if npl_result else '' }}" placeholder="–">
+                    <span class="npl-unit">kg</span>
+                </div>
+                <div class="npl-spacer"></div>
+                <div class="npl-row">
+                    <span class="npl-lbl">T<sub>AC</sub></span>
+                    <input type="text" class="npl-result-input" readonly tabindex="-1" id="tac_display"
+                        value="{{ '%.2f'|format(npl_result.tac) if npl_result else '' }}" placeholder="–">
+                    <span class="npl-unit">kg</span>
+                </div>
+                <div class="npl-row">
+                    <span class="npl-lbl">T<sub>TC</sub></span>
+                    <input type="text" class="npl-result-input" readonly tabindex="-1" id="ttc_display"
+                        value="{{ '%.2f'|format(npl_result.ttc) if npl_result else '' }}" placeholder="–">
+                    <span class="npl-unit">kg</span>
+                </div>
+            </div>
+        </div>
+
+        {# ── Row 2, Col 1: Wastage (kg) ───────────────────── #}
+        <div>
+            <div class="npl-section">
+                <span class="npl-section-title">Wastage (kg)</span>
+                <div id="wastage-fields" class="npl-hidden-fields collapsed">
+                    <div class="npl-row">
+                        <span class="npl-lbl">R<sub>MKG</sub></span>
+                        <input type="number" step="0.001" name="r_mkg" class="npl-input"
+                            value="{{ data.get('r_mkg', '') }}" placeholder="0">
+                    </div>
+                    <div class="npl-row">
+                        <span class="npl-lbl">R<sub>NDT</sub></span>
+                        <input type="number" step="0.001" name="r_ndt" class="npl-input"
+                            value="{{ data.get('r_ndt', '') }}" placeholder="0">
+                    </div>
+                    <div class="npl-row">
+                        <span class="npl-lbl">R<sub>PKG</sub></span>
+                        <input type="number" step="0.001" name="r_pkg" class="npl-input"
+                            value="{{ data.get('r_pkg', '') }}" placeholder="0">
+                    </div>
+                </div>
+                <div class="text-end mt-1">
+                    <small class="text-muted npl-toggle collapsed" onclick="toggleSection('wastage-fields', this)"
+                        style="cursor:pointer"><i class="bi bi-chevron-down"></i> show</small>
+                </div>
+            </div>
+        </div>
+
+        {# ── Row 2, Col 2-3: Other Parameters ─────────────── #}
+        <div style="grid-column: span 2;">
+            <div class="npl-section">
+                <span class="npl-section-title">Other Parameters</span>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="npl-row">
+                            <span class="npl-lbl">T<sub>USD</sub></span>
+                            <input type="number" step="0.001" name="t_usd" id="t_usd" class="npl-input"
+                                value="{{ data.get('t_usd', '') }}" placeholder="0" readonly
+                                style="background:#f0f0f0; cursor:default;">
+                            <span class="npl-unit">Kg</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="npl-row">
+                            <span class="npl-lbl">M<sub>DSP</sub></span>
+                            <input type="number" step="0.001" name="m_dsp" class="npl-input pink"
+                                value="{{ data.get('m_dsp', '') }}" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+                <div id="other-extra" class="npl-hidden-fields collapsed">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="npl-row">
+                                <span class="npl-lbl">M<sub>DST</sub></span>
+                                <input type="number" step="0.001" name="m_dst" class="npl-input"
+                                    value="{{ data.get('m_dst', '') }}" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="npl-row">
+                                <span class="npl-lbl">N<sub>W</sub></span>
+                                <input type="number" step="0.001" name="n_w" class="npl-input"
+                                    value="{{ data.get('n_w', '') }}" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end mt-1">
+                    <small class="text-muted npl-toggle collapsed" onclick="toggleSection('other-extra', this)"
+                        style="cursor:pointer"><i class="bi bi-chevron-down"></i> more</small>
+                </div>
+            </div>
+        </div>
+
+        {# ── Action bar ───────────────────────────────────── #}
+        <div class="npl-actions">
+            {{ form_actions(url_for('npl.index'), 'Calculate NPL', 'bi-calculator') }}
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleFields(el) {
+        const fields = el.nextElementSibling;
+        el.classList.toggle('collapsed');
+        fields.classList.toggle('collapsed');
+    }
+    function toggleSection(id, el) {
+        const section = document.getElementById(id);
+        section.classList.toggle('collapsed');
+        el.classList.toggle('collapsed');
+        el.innerHTML = section.classList.contains('collapsed')
+            ? '<i class="bi bi-chevron-down"></i> show'
+            : '<i class="bi bi-chevron-up"></i> hide';
+    }
+
+    // Auto-compute T_USD = (L_DST - T_ISS) / 1000000
+    function calcTusd() {
+        const ldst = parseFloat(document.querySelector('[name="l_dst"]').value) || 0;
+        const tiss = parseFloat(document.querySelector('[name="t_iss"]').value) || 0;
+        const tusd = ((ldst - tiss) / 1000000).toFixed(3);
+        document.getElementById('t_usd').value = tusd;
+    }
+    document.querySelector('[name="l_dst"]')?.addEventListener('input', calcTusd);
+    document.querySelector('[name="t_iss"]')?.addEventListener('input', calcTusd);
+    calcTusd();
+</script>
+{% endblock %}

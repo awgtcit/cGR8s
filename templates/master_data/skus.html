@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, empty_state, delete_button %}
+{% block title %}SKUs{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.blends') }}">Master Data</a>
+<span class="separator">/</span>
+<span class="current">SKUs</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-box-seam"></i> SKUs</h2>
+    <a href="{{ url_for('master_data.sku_create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add
+        SKU</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        {{ search_bar('master_data.skus') }}
+    </div>
+    <div class="card-body p-0">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>SKU Code</th>
+                        <th>Description</th>
+                        <th>Nicotine</th>
+                        <th>Ventilation</th>
+                        <th>PD Code</th>
+                        <th>Cig Code</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in items %}
+                    <tr>
+                        <td><strong>{{ s.sku_code }}</strong></td>
+                        <td>{{ s.description or '—' }}</td>
+                        <td>{{ s.nicotine if s.nicotine is not none else '—' }}</td>
+                        <td>{{ s.ventilation if s.ventilation is not none else '—' }}</td>
+                        <td>{{ s.pd_code or '—' }}</td>
+                        <td>{{ s.cig_code or '—' }}</td>
+                        <td>
+                            {% if s.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('master_data.sku_edit', id=s.id) }}"
+                                class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            {{ delete_button(url_for('master_data.sku_delete', id=s.id), 'SKU') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        {{ empty_state('No SKUs defined', 'Add an SKU to get started.') }}
+        {% endif %}
+    </div>
+    {% if items and total_pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, total_pages, 'master_data.skus') }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

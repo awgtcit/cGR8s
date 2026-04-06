@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions, form_section %}
+{% block title %}{% if fg %}Edit FG Code{% else %}New FG Code{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('fg_codes.index') }}">FG Codes</a>
+<span class="separator">/</span>
+<span class="current">{% if fg %}Edit{% else %}New{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-upc-scan"></i> {% if fg %}Edit FG Code: {{ fg.fg_code }}{% else %}New FG Code{% endif %}</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post"
+            action="{% if fg %}{{ url_for('fg_codes.edit', id=fg.id) }}{% else %}{{ url_for('fg_codes.create') }}{% endif %}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if fg %}<input type="hidden" name="row_version" value="{{ data.get('row_version', 0) }}">{% endif %}
+
+            {% call form_section('Basic Information', 'info-circle') %}
+            <div class="row">
+                <div class="col-md-4">{{ form_field('fg_code', 'FG Code', data.get('fg_code', ''), required=true,
+                    errors=errors) }}</div>
+                <div class="col-md-4">{{ form_field('brand', 'Brand', data.get('brand', ''), required=true,
+                    errors=errors) }}</div>
+                <div class="col-md-4">{{ form_field('format', 'Format', data.get('format', ''), required=true,
+                    errors=errors) }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('fg_gtin', 'FG GTIN', data.get('fg_gtin', ''), errors=errors) }}
+                </div>
+                <div class="col-md-3">{{ form_field('blend', 'Blend', data.get('blend', ''), errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('blend_code', 'Blend Code', data.get('blend_code', ''),
+                    errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('blend_gtin', 'Blend GTIN', data.get('blend_gtin', ''),
+                    errors=errors) }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">{{ form_field('tow_used', 'Tow Used', data.get('tow_used', ''), errors=errors) }}
+                </div>
+                <div class="col-md-3">{{ form_field('filter_code', 'Filter Code', data.get('filter_code', ''),
+                    errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('cig_code', 'Cigarette Code', data.get('cig_code', ''),
+                    errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('c_plg', 'C_PLG', data.get('c_plg', ''), type='number',
+                    step='0.0001', errors=errors) }}</div>
+            </div>
+            {% endcall %}
+
+            {% call form_section('Dimensions', 'rulers') %}
+            <div class="row">
+                <div class="col-md-3">{{ form_field('cig_length', 'Cigarette Length (mm)', data.get('cig_length', ''),
+                    type='number', step='0.01', errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('tobacco_rod_length', 'Tobacco Rod Length (mm)',
+                    data.get('tobacco_rod_length', ''), type='number', step='0.01', errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('filter_length', 'Filter Length (mm)', data.get('filter_length',
+                    ''), type='number', step='0.01', errors=errors) }}</div>
+                <div class="col-md-3">{{ form_field('plug_length', 'Plug Length (mm)', data.get('plug_length', ''),
+                    type='number', step='0.01', errors=errors) }}</div>
+            </div>
+            {% endcall %}
+
+            {{ form_actions(url_for('fg_codes.index'), submit_label='Update' if fg else 'Create',
+            submit_icon='bi-check-lg') }}
+        </form>
+    </div>
+</div>
+{% endblock %}

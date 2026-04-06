@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import status_badge %}
+{% block title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<span class="current">Dashboard</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+</div>
+
+<!-- KPI Row -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon"><i class="bi bi-clipboard-data"></i></div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Active Orders</div>
+                    <div class="kpi-value" id="kpi-orders">{{ active_orders }}</div>
+                    <div class="kpi-sub">{{ total_orders }} total</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card accent-secondary">
+            <div class="card-body">
+                <div class="kpi-icon"><i class="bi bi-check2-circle"></i></div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Completed</div>
+                    <div class="kpi-value" id="kpi-completed">{{ completed_orders }}</div>
+                    <div class="kpi-sub">process orders</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card accent-warning">
+            <div class="card-body">
+                <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Pending QA</div>
+                    <div class="kpi-value" id="kpi-qa">{{ pending_qa }}</div>
+                    <div class="kpi-sub">awaiting analysis</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card accent-danger">
+            <div class="card-body">
+                <div class="kpi-icon"><i class="bi bi-percent"></i></div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Avg NPL</div>
+                    <div class="kpi-value" id="kpi-npl">{{ avg_npl if avg_npl is not none else '–' }}%</div>
+                    <div class="kpi-sub">non-product loss</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions + Status Overview -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="quick-actions-grid">
+                    <a href="{{ url_for('process_orders.create') }}" class="quick-action-item">
+                        <div class="quick-action-icon bg-primary-soft"><i class="bi bi-plus-lg"></i></div>
+                        <span>New Process Order</span>
+                    </a>
+                    <a href="{{ url_for('fg_codes.create') }}" class="quick-action-item">
+                        <div class="quick-action-icon bg-secondary-soft"><i class="bi bi-upc-scan"></i></div>
+                        <span>New FG Code</span>
+                    </a>
+                    <a href="{{ url_for('batch.submit') }}" class="quick-action-item">
+                        <div class="quick-action-icon bg-warning-soft"><i class="bi bi-stack"></i></div>
+                        <span>Batch Processing</span>
+                    </a>
+                    <a href="{{ url_for('reports.generate') }}" class="quick-action-item">
+                        <div class="quick-action-icon bg-info-soft"><i class="bi bi-file-earmark-pdf"></i></div>
+                        <span>Generate Report</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-pie-chart"></i> Order Status Breakdown
+            </div>
+            <div class="card-body">
+                <div class="status-bars">
+                    {% for status, count in status_counts.items() %}
+                    {% if count > 0 %}
+                    <div class="status-bar-row">
+                        <div class="status-bar-label">{{ status_badge(status) }}</div>
+                        <div class="status-bar-track">
+                            <div class="status-bar-fill {% if status == 'Completed' %}bg-success{% elif status == 'Draft' %}bg-secondary{% elif status == 'QA Pending' %}bg-warning{% elif status == 'Report Generated' %}bg-info{% else %}bg-primary{% endif %}"
+                                style="width: {{ (count / total_orders * 100) if total_orders > 0 else 0 }}%"></div>
+                        </div>
+                        <div class="status-bar-count">{{ count }}</div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% if total_orders == 0 %}
+                    <p class="text-muted text-center mb-0 py-3">No process orders yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Orders + Recent Activity -->
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history"></i> Recent Process Orders</span>
+                <a href="{{ url_for('process_orders.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>FG Code</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for po, fg_code_val in recent_orders %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('process_orders.detail', id=po.id) }}">{{
+                                        po.process_order_number }}</a>
+                                </td>
+                                <td>{{ fg_code_val or '–' }}</td>
+                                <td>{{ po.process_date.strftime('%d %b %Y') if po.process_date else '–' }}</td>
+                                <td>{{ status_badge(po.status) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    No process orders yet. <a href="{{ url_for('process_orders.create') }}">Create
+                                        one</a>.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-activity"></i> Recent Activity
+            </div>
+            <div class="card-body p-0">
+                <div class="activity-feed">
+                    {% for entry in recent_activity %}
+                    <div class="activity-item">
+                        <div class="activity-icon
+                            {%- if entry.action == 'CREATE' %} bg-success-soft
+                            {%- elif entry.action == 'UPDATE' %} bg-primary-soft
+                            {%- elif entry.action == 'DELETE' %} bg-danger-soft
+                            {%- elif entry.action == 'STATUS_CHANGE' %} bg-warning-soft
+                            {%- else %} bg-secondary-soft{% endif %}">
+                            <i class="bi
+                                {%- if entry.action == 'CREATE' %} bi-plus-lg
+                                {%- elif entry.action == 'UPDATE' %} bi-pencil
+                                {%- elif entry.action == 'DELETE' %} bi-trash
+                                {%- elif entry.action == 'STATUS_CHANGE' %} bi-arrow-left-right
+                                {%- else %} bi-circle{% endif %}"></i>
+                        </div>
+                        <div class="activity-body">
+                            <div class="activity-text">
+                                <strong>{{ entry.action }}</strong> {{ entry.entity_type or '' }}
+                            </div>
+                            <div class="activity-meta">
+                                {{ entry.user_email.split('@')[0] if entry.user_email else 'System' }}
+                                · {{ entry.timestamp.strftime('%d %b, %H:%M') if entry.timestamp else '' }}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-muted text-center py-4">No recent activity.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

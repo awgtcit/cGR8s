@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, status_badge, empty_state %}
+{% block title %}FG Codes{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">FG Codes</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-upc-scan"></i> FG Codes</h2>
+    <a href="{{ url_for('fg_codes.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New FG Code
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        {{ search_bar('fg_codes.index', search, 'Search FG code, brand, format...') }}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>FG Code</th>
+                        <th>Brand</th>
+                        <th>Format</th>
+                        <th>Blend</th>
+                        <th>Cig Length</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fg in items %}
+                    <tr>
+                        <td><a href="{{ url_for('fg_codes.detail', id=fg.id) }}">{{ fg.fg_code }}</a></td>
+                        <td>{{ fg.brand }}</td>
+                        <td>{{ fg.format }}</td>
+                        <td>{{ fg.blend or '–' }}</td>
+                        <td>{{ fg.cig_length|number(1) if fg.cig_length else '–' }}</td>
+                        <td>
+                            <a href="{{ url_for('fg_codes.edit', id=fg.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">
+                            {{ empty_state('No FG codes found', url_for('fg_codes.create'), 'Add FG Code') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if pages is defined and pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, pages, 'fg_codes.index', q=search) }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

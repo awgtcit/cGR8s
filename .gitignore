@@ -1,0 +1,59 @@
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ─────────────────────────────────
+.venv/
+venv/
+ENV/
+
+# ── Environment / secrets ────────────────────────────────
+.env
+*.pem
+*.key
+
+# ── Node / Playwright ────────────────────────────────────
+node_modules/
+test-results/
+playwright-report/
+package-lock.json
+
+# ── IDE / editor ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ─────────────────────────────────────────────────
+logs/
+*.log
+
+# ── OS files ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Reports & exports (generated at runtime) ─────────────
+reports/*.pdf
+reports/*.xlsx
+exports/
+
+# ── Pytest / coverage ────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── Alembic (keep versions, ignore pycache) ──────────────
+migrations/__pycache__/
+migrations/versions/__pycache__/
+
+# ── Misc ─────────────────────────────────────────────────
+.workspace-secure-bootstrap.json

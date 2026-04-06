@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Product Development{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">Product Development</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-flask"></i> Product Development</h2>
+    <a href="{{ url_for('product_dev.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New Request
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted">Product development requests will appear here.</p>
+    </div>
+</div>
+{% endblock %}

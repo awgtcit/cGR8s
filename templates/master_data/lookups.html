@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, empty_state, delete_button %}
+{% block title %}Lookups{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.blends') }}">Master Data</a>
+<span class="separator">/</span>
+<span class="current">Lookups</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-list-check"></i> Lookups</h2>
+    <a href="{{ url_for('master_data.lookup_create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add
+        Lookup</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" action="{{ url_for('master_data.lookups') }}" class="table-toolbar">
+            <div class="toolbar-left">
+                <div class="search-input-wrap">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" name="q" class="form-control" value="{{ request.args.get('q', '') }}"
+                        placeholder="Search lookups…">
+                </div>
+                <select name="category" class="form-select form-select-sm" style="min-width:160px;">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {{ 'selected' if request.args.get('category')==cat }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Code</th>
+                        <th>Display Name</th>
+                        <th>Sort Order</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lk in items %}
+                    <tr>
+                        <td><span class="badge bg-info">{{ lk.category }}</span></td>
+                        <td><strong>{{ lk.code }}</strong></td>
+                        <td>{{ lk.display_name }}</td>
+                        <td>{{ lk.sort_order or 0 }}</td>
+                        <td>
+                            {% if lk.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('master_data.lookup_edit', id=lk.id) }}"
+                                class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            {{ delete_button(url_for('master_data.lookup_delete', id=lk.id), 'lookup') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        {{ empty_state('No lookups found', 'Add lookup entries to populate dropdowns and reference data.') }}
+        {% endif %}
+    </div>
+    {% if items and total_pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, total_pages, 'master_data.lookups') }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

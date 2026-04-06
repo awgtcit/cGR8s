@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}Generate Report{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('reports.index') }}">Reports</a>
+<span class="separator">/</span>
+<span class="current">Generate</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-file-earmark-bar-graph"></i> Generate Report</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('reports.generate') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label">Report Type</label>
+                <select name="report_type" class="form-select" required>
+                    <option value="">-- Select Report Type --</option>
+                    <option value="process_order_summary" {{ 'selected' if
+                        data.get('report_type')=='process_order_summary' }}>Process Order Summary</option>
+                    <option value="target_weight" {{ 'selected' if data.get('report_type')=='target_weight' }}>Target
+                        Weight Report</option>
+                    <option value="npl_analysis" {{ 'selected' if data.get('report_type')=='npl_analysis' }}>NPL
+                        Analysis</option>
+                    <option value="qa_summary" {{ 'selected' if data.get('report_type')=='qa_summary' }}>QA Summary
+                    </option>
+                    <option value="optimizer_results" {{ 'selected' if data.get('report_type')=='optimizer_results' }}>
+                        Optimizer Results</option>
+                    <option value="reconciliation" {{ 'selected' if data.get('report_type')=='reconciliation' }}>Goods
+                        Reconciliation</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Output Format</label>
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="format" value="pdf" id="fmt_pdf" {{ 'checked'
+                            if data.get('format', 'pdf' )=='pdf' }}>
+                        <label class="form-check-label" for="fmt_pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="format" value="excel" id="fmt_excel"
+                            {{ 'checked' if data.get('format')=='excel' }}>
+                        <label class="form-check-label" for="fmt_excel"><i class="bi bi-file-earmark-spreadsheet"></i>
+                            Excel</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('date_from', 'From Date', data.get('date_from', ''), type='date', errors=errors) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('date_to', 'To Date', data.get('date_to', ''), type='date', errors=errors) }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">FG Code Filter (optional)</label>
+                <select name="fg_code_id" class="form-select">
+                    <option value="">All FG Codes</option>
+                    {% for fg in fg_codes %}
+                    <option value="{{ fg.id }}" {{ 'selected' if data.get('fg_code_id')==fg.id|string }}>{{ fg.fg_code
+                        }} – {{ fg.brand_family }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                {{ form_field('title', 'Report Title (optional)', data.get('title', ''), errors=errors) }}
+            </div>
+
+            {{ form_actions(url_for('reports.index'), submit_label='Generate', submit_icon='bi-file-earmark-arrow-down')
+            }}
+        </form>
+    </div>
+</div>
+{% endblock %}

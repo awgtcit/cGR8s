@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import delete_button %}
+{% block title %}FG Code: {{ fg.fg_code }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('fg_codes.index') }}">FG Codes</a>
+<span class="separator">/</span>
+<span class="current">{{ fg.fg_code }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-upc-scan"></i> {{ fg.fg_code }}</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('fg_codes.edit', id=fg.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i>
+            Edit</a>
+        {{ delete_button(url_for('fg_codes.delete', id=fg.id), csrf_token()) }}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">General Information</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>FG Code</th>
+                        <td>{{ fg.fg_code }}</td>
+                    </tr>
+                    <tr>
+                        <th>Brand</th>
+                        <td>{{ fg.brand }}</td>
+                    </tr>
+                    <tr>
+                        <th>Format</th>
+                        <td>{{ fg.format }}</td>
+                    </tr>
+                    <tr>
+                        <th>FG GTIN</th>
+                        <td>{{ fg.fg_gtin or '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Blend</th>
+                        <td>{{ fg.blend or '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Blend Code</th>
+                        <td>{{ fg.blend_code or '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Filter Code</th>
+                        <td>{{ fg.filter_code or '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Tow Used</th>
+                        <td>{{ fg.tow_used or '–' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Dimensions</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>Cigarette Length</th>
+                        <td>{{ fg.cig_length|number(2) if fg.cig_length else '–' }} mm</td>
+                    </tr>
+                    <tr>
+                        <th>Tobacco Rod Length</th>
+                        <td>{{ fg.tobacco_rod_length|number(2) if fg.tobacco_rod_length else '–' }} mm</td>
+                    </tr>
+                    <tr>
+                        <th>Filter Length</th>
+                        <td>{{ fg.filter_length|number(2) if fg.filter_length else '–' }} mm</td>
+                    </tr>
+                    <tr>
+                        <th>Plug Length</th>
+                        <td>{{ fg.plug_length|number(2) if fg.plug_length else '–' }} mm</td>
+                    </tr>
+                    <tr>
+                        <th>C_PLG</th>
+                        <td>{{ fg.c_plg|number(4) if fg.c_plg else '–' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

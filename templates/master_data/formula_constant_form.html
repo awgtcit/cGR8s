@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}{{ 'Edit' if constant else 'New' }} Formula Constant{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.formula_constants') }}">Formula Constants</a>
+<span class="separator">/</span>
+<span class="current">{{ 'Edit' if constant else 'New' }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-calculator"></i> {{ 'Edit' if constant else 'New' }} Formula Constant</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post"
+            action="{{ url_for('master_data.formula_constant_edit', id=constant.id) if constant else url_for('master_data.formula_constant_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if constant %}
+            <input type="hidden" name="row_version" value="{{ constant.row_version }}">
+            {% endif %}
+
+            {{ form_field('name', 'Name', data.get('name', constant.name if constant else ''),
+            required=true, errors=errors) }}
+            {{ form_field('value', 'Value', data.get('value', constant.value if constant else ''),
+            type='number', step='0.000001', required=true, errors=errors) }}
+            {{ form_field('description', 'Description', data.get('description', constant.description if constant else
+            ''),
+            errors=errors) }}
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ 'checked' if
+                        data.get('is_active', constant.is_active if constant else true) }}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
+            </div>
+
+            {{ form_actions(url_for('master_data.formula_constants')) }}
+        </form>
+    </div>
+</div>
+{% endblock %}

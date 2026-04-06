@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_section %}
+{% block title %}System Configuration{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('admin.index') }}">Admin</a>
+<span class="separator">/</span>
+<span class="current">System Config</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-sliders2"></i> System Configuration</h2>
+    <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Admin</a>
+</div>
+
+<div class="card" style="max-width:800px;">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('admin.system_config') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            {% call form_section('Authentication', 'shield-lock') %}
+            {{ form_field('auth_app_url', 'Auth-App URL', configs.get('auth_app_url', 'http://ams-it-126:5000'),
+            help_text='Base URL of the Al Wahdania Auth Platform') }}
+            {{ form_field('auth_api_key', 'Auth-App API Key', configs.get('auth_api_key', ''), type='password') }}
+
+            <div class="d-flex align-items-center gap-2 mt-2 mb-3">
+                <button type="button" id="btn-test-auth" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-plug"></i> Test Connection
+                </button>
+                <div id="auth-test-result" class="d-none">
+                    <span id="auth-test-spinner" class="spinner-border spinner-border-sm text-primary d-none"
+                        role="status"></span>
+                    <span id="auth-test-message" class="small"></span>
+                </div>
+            </div>
+            {% endcall %}
+
+            {% call form_section('Application Settings', 'gear') %}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('default_page_size', 'Default Page Size', configs.get('default_page_size', '25'),
+                    type='number') }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('batch_max_workers', 'Batch Max Workers', configs.get('batch_max_workers', '4'),
+                    type='number') }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('batch_chunk_size', 'Batch Chunk Size', configs.get('batch_chunk_size', '50'),
+                    type='number') }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('batch_max_retries', 'Batch Max Retries', configs.get('batch_max_retries', '3'),
+                    type='number') }}
+                </div>
+            </div>
+            {% endcall %}
+
+            {% call form_section('Report Defaults', 'file-earmark-text') %}
+            {{ form_field('company_name', 'Company Name', configs.get('company_name', 'AL WAHDANIA')) }}
+            {{ form_field('report_footer', 'Report Footer Text', configs.get('report_footer', 'Confidential – For
+            Internal Use Only')) }}
+            {% endcall %}
+
+            <div class="form-actions" style="border-top: none; margin-top: 0;">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Configuration</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById('btn-test-auth');
+        const resultBox = document.getElementById('auth-test-result');
+        const spinner = document.getElementById('auth-test-spinner');
+        const msgEl = document.getElementById('auth-test-message');
+
+        btn.addEventListener('click', function () {
+            const authUrl = document.getElementById('auth_app_url').value.trim();
+            const apiKey = document.getElementById('auth_api_key').value.trim();
+
+            if (!authUrl) {
+                showResult(false, 'Please enter an Auth-App URL first.');
+                return;
+            }
+
+            // Show spinner
+            resultBox.classList.remove('d-none');
+            spinner.classList.remove('d-none');
+            msgEl.textContent = 'Testing connection...';
+            msgEl.className = 'small text-muted';
+            btn.disabled = true;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            fetch("{{ url_for('admin.test_auth_connection') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ auth_url: authUrl, api_key: apiKey })
+            })
+                .then(function (resp) { return resp.json(); })
+                .then(function (data) {
+                    showResult(data.success, data.message, data.connectivity, data.api_reachable);
+                })
+                .catch(function (err) {
+                    showResult(false, 'Request failed: ' + err.message);
+                })
+                .finally(function () {
+                    spinner.classList.add('d-none');
+                    btn.disabled = false;
+                });
+        });
+
+        function showResult(success, message, connectivity, apiReachable) {
+            resultBox.classList.remove('d-none');
+            spinner.classList.add('d-none');
+
+            if (success) {
+                msgEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> ' + escapeHtml(message);
+                msgEl.className = 'small text-success';
+            } else if (connectivity) {
+                msgEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning"></i> ' + escapeHtml(message);
+                msgEl.className = 'small text-warning';
+            } else {
+                msgEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> ' + escapeHtml(message);
+                msgEl.className = 'small text-danger';
+            }
+        }
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(text));
+            return div.innerHTML;
+        }
+    });
+</script>
+{% endblock %}

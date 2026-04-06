@@ -1,0 +1,853 @@
+{% extends 'base.html' %}
+{% set page_title = 'FG Codes - VB Style Interface' %}
+{% set section = 'fg_codes' %}
+
+{% block extra_css %}
+<style>
+    .fg-main-container {
+        height: 90vh;
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+
+    .fg-panel {
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .fg-panel-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .fg-panel-body {
+        padding: 16px;
+        height: calc(100% - 52px);
+        overflow-y: auto;
+    }
+
+    /* FG Code List Panel */
+    .fg-list-panel {
+        height: 100%;
+    }
+
+    .fg-load-controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .load-input {
+        flex: 1;
+        min-width: 80px;
+    }
+
+    .load-btn {
+        background: #28a745;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .load-btn:hover {
+        background: #218838;
+        transform: translateY(-1px);
+    }
+
+    .load-all-btn {
+        background: #17a2b8;
+    }
+
+    .load-all-btn:hover {
+        background: #138496;
+    }
+
+    .record-count {
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .fg-list {
+        border: 1px solid #dee2e6;
+        height: calc(100% - 80px);
+        overflow-y: auto;
+    }
+
+    .fg-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .fg-item:hover {
+        background: #e3f2fd;
+        transform: translateX(2px);
+    }
+
+    .fg-item.active {
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+        color: white;
+    }
+
+    .fg-code {
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .fg-brand {
+        font-size: 12px;
+        color: #666;
+        margin-top: 2px;
+    }
+
+    .fg-item.active .fg-brand {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* SKU Details Panel */
+    .sku-details {
+        height: 100%;
+    }
+
+    .detail-tabs {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        background: #f8f9fa;
+        margin: -16px -16px 16px -16px;
+        padding: 0 16px;
+    }
+
+    .detail-tab {
+        padding: 12px 20px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        font-weight: 500;
+        transition: all 0.2s;
+        font-size: 13px;
+    }
+
+    .detail-tab:hover {
+        background: #e9ecef;
+    }
+
+    .detail-tab.active {
+        border-bottom-color: #007bff;
+        color: #007bff;
+        background: white;
+    }
+
+    .detail-content {
+        display: none;
+    }
+
+    .detail-content.active {
+        display: block;
+    }
+
+    .detail-row {
+        display: flex;
+        margin-bottom: 8px;
+        align-items: center;
+    }
+
+    .detail-label {
+        width: 140px;
+        font-weight: 500;
+        color: #495057;
+        font-size: 13px;
+    }
+
+    .detail-value {
+        flex: 1;
+        padding: 6px 12px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+    }
+
+    /* Key Variables Panel */
+    .key-variables {
+        height: 100%;
+    }
+
+    .variable-group {
+        margin-bottom: 16px;
+    }
+
+    .variable-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .variable-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .calculate-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 16px;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .calculate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+    }
+
+    /* Results Panel */
+    .results-panel {
+        height: 100%;
+    }
+
+    .results-section {
+        margin-bottom: 20px;
+    }
+
+    .results-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 4px;
+    }
+
+    .results-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .result-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 12px;
+        background: #f8f9fa;
+        border-left: 3px solid #28a745;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
+    .result-label {
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .result-value {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .npl-btn {
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+        color: white;
+    }
+
+    .npl-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+    }
+
+    .optimizer-btn {
+        background: linear-gradient(135deg, #43e97b, #38f9d7);
+        color: #333;
+    }
+
+    .optimizer-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
+    }
+
+    .process-order-btn {
+        background: linear-gradient(135deg, #fa709a, #fee140);
+        color: #333;
+    }
+
+    .process-order-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(250, 112, 154, 0.3);
+    }
+
+    /* Loading States */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #333;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .results-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .fg-main-container {
+            height: auto;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h2 class="page-title">
+                <i class="bi bi-boxes text-primary me-2"></i>
+                FG Codes - Target Weight Calculation System
+            </h2>
+            <p class="text-muted mb-0">Select FG Code, configure variables, and calculate target weights</p>
+        </div>
+    </div>
+
+    <div class="row fg-main-container">
+        <!-- FG Code List Panel -->
+        <div class="col-md-3 mb-4">
+            <div class="fg-panel fg-list-panel">
+                <div class="fg-panel-header">
+                    <i class="bi bi-list-ul me-2"></i>FG Code List
+                </div>
+                <div class="fg-panel-body">
+                    <div class="fg-load-controls">
+                        <input type="number" id="loadLimit" class="form-control load-input" value="200" min="1"
+                            max="1000">
+                        <button type="button" id="loadBtn" class="load-btn">
+                            <i class="bi bi-download me-1"></i>Load
+                        </button>
+                        <button type="button" id="loadAllBtn" class="load-all-btn">
+                            <i class="bi bi-globe me-1"></i>All
+                        </button>
+                    </div>
+
+                    <div class="record-count" id="recordCount">
+                        No records loaded
+                    </div>
+
+                    <div class="fg-list" id="fgList">
+                        <div class="text-center p-4 text-muted">
+                            <i class="bi bi-info-circle mb-2 d-block"></i>
+                            Click "Load" to display FG codes
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SKU Details Panel -->
+        <div class="col-md-4 mb-4">
+            <div class="fg-panel sku-details">
+                <div class="fg-panel-header">
+                    <i class="bi bi-info-circle me-2"></i>SKU Details
+                </div>
+                <div class="fg-panel-body">
+                    <div id="skuDetailsContent">
+                        <div class="text-center p-4 text-muted">
+                            <i class="bi bi-cursor mb-2 d-block"></i>
+                            Select an FG Code to view details
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Variables Panel -->
+        <div class="col-md-2 mb-4">
+            <div class="fg-panel key-variables">
+                <div class="fg-panel-header">
+                    <i class="bi bi-sliders me-2"></i>Key Variables
+                </div>
+                <div class="fg-panel-body">
+                    <div class="variable-group">
+                        <label class="variable-label">N_BLD (Blend Nicotine)</label>
+                        <input type="number" id="n_bld" class="variable-input" step="0.001" value="0.000">
+                    </div>
+
+                    <div class="variable-group">
+                        <label class="variable-label">P_CU (Paper CU)</label>
+                        <input type="number" id="p_cu" class="variable-input" step="0.001" value="0.000">
+                    </div>
+
+                    <div class="variable-group">
+                        <label class="variable-label">T_VNT (Tip Ventilation)</label>
+                        <input type="number" id="t_vnt" class="variable-input" step="0.001" value="0.000">
+                    </div>
+
+                    <div class="variable-group">
+                        <label class="variable-label">F_PD (Filter PD)</label>
+                        <input type="number" id="f_pd" class="variable-input" step="0.001" value="0.000">
+                    </div>
+
+                    <div class="variable-group">
+                        <label class="variable-label">M_IP (Input Moisture)</label>
+                        <input type="number" id="m_ip" class="variable-input" step="0.001" value="0.000">
+                    </div>
+
+                    <button type="button" id="calculateBtn" class="calculate-btn" disabled>
+                        <i class="bi bi-calculator me-2"></i>Calculate
+                    </button>
+
+                    <div class="action-buttons">
+                        <button type="button" id="nplBtn" class="action-btn npl-btn" disabled>
+                            <i class="bi bi-gear me-1"></i>NPL
+                        </button>
+                        <button type="button" id="optimizerBtn" class="action-btn optimizer-btn" disabled>
+                            <i class="bi bi-graph-up me-1"></i>OPT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="col-md-3 mb-4">
+            <div class="fg-panel results-panel">
+                <div class="fg-panel-header">
+                    <i class="bi bi-bar-chart me-2"></i>Calculation Results
+                </div>
+                <div class="fg-panel-body">
+                    <div id="resultsContent">
+                        <div class="text-center p-4 text-muted">
+                            <i class="bi bi-play-circle mb-2 d-block"></i>
+                            Run calculation to see results
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Process Order Modal -->
+<div class="modal fade" id="processOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Process Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="processOrderForm">
+                    <div class="mb-3">
+                        <label class="form-label">Process Order ID</label>
+                        <input type="text" id="processOrderId" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Process Date</label>
+                        <input type="date" id="processDate" class="form-control" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="createProcessOrderBtn" class="btn btn-primary">Create Order</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        // CSRF setup for all AJAX POST/PUT/DELETE requests
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+        $.ajaxSetup({
+            beforeSend: function (xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                }
+            }
+        });
+
+        let selectedFgCode = null;
+        let skuDetails = null;
+
+        // Load FG Codes
+        $('#loadBtn').click(function () {
+            const limit = $('#loadLimit').val();
+            loadFgCodes(limit, false);
+        });
+
+        $('#loadAllBtn').click(function () {
+            loadFgCodes(0, true);
+        });
+
+        function loadFgCodes(limit, loadAll) {
+            $('#fgList').html('<div class="text-center p-4"><div class="spinner"></div><br>Loading...</div>');
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_load_codes") }}',
+                data: { limit: limit, all: loadAll },
+                success: function (data) {
+                    displayFgCodes(data);
+                },
+                error: function () {
+                    $('#fgList').html('<div class="text-center p-4 text-danger">Error loading FG codes</div>');
+                }
+            });
+        }
+
+        function displayFgCodes(data) {
+            $('#recordCount').text(`Loaded ${data.loaded_count} of ${data.total_count} records`);
+
+            let html = '';
+            data.codes.forEach(function (code) {
+                html += `<div class="fg-item" data-id="${code.id}" data-code="${code.fg_code}">
+                        <div class="fg-code">${code.fg_code}</div>
+                        <div class="fg-brand">${code.brand} - ${code.format}</div>
+                     </div>`;
+            });
+
+            $('#fgList').html(html);
+        }
+
+        // FG Code Selection
+        $(document).on('click', '.fg-item', function () {
+            $('.fg-item').removeClass('active');
+            $(this).addClass('active');
+
+            selectedFgCode = $(this).data('code');
+            loadSkuDetails(selectedFgCode);
+        });
+
+        function loadSkuDetails(fgCode) {
+            $('#skuDetailsContent').html('<div class="text-center p-4"><div class="spinner"></div><br>Loading...</div>');
+
+            $.ajax({
+                url: `{{ url_for("fg_codes.api_sku_details", fg_code="") }}${fgCode}`,
+                success: function (data) {
+                    skuDetails = data;
+                    displaySkuDetails(data);
+                    enableCalculation();
+                },
+                error: function () {
+                    $('#skuDetailsContent').html('<div class="text-center p-4 text-danger">Error loading details</div>');
+                }
+            });
+        }
+
+        function displaySkuDetails(data) {
+            const html = `
+            <div class="detail-tabs">
+                <div class="detail-tab active" data-tab="fg">Product</div>
+                <div class="detail-tab" data-tab="blend">Blend</div>
+                <div class="detail-tab" data-tab="physical">Physical</div>
+            </div>
+
+            <div class="detail-content active" data-tab="fg">
+                <div class="detail-row">
+                    <div class="detail-label">FG Code:</div>
+                    <div class="detail-value">${data.fg_details.fg_code}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Brand:</div>
+                    <div class="detail-value">${data.fg_details.brand}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">FG GTIN:</div>
+                    <div class="detail-value">${data.fg_details.fg_gtin || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Format:</div>
+                    <div class="detail-value">${data.fg_details.format}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Tow Used:</div>
+                    <div class="detail-value">${data.fg_details.tow_used || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Filter Code:</div>
+                    <div class="detail-value">${data.fg_details.filter_code || 'N/A'}</div>
+                </div>
+            </div>
+
+            <div class="detail-content" data-tab="blend">
+                <div class="detail-row">
+                    <div class="detail-label">Blend Code:</div>
+                    <div class="detail-value">${data.blend_details.blend_code || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Blend:</div>
+                    <div class="detail-value">${data.blend_details.blend || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Blend GTIN:</div>
+                    <div class="detail-value">${data.blend_details.blend_gtin || 'N/A'}</div>
+                </div>
+            </div>
+
+            <div class="detail-content" data-tab="physical">
+                <div class="detail-row">
+                    <div class="detail-label">Cigarette Length:</div>
+                    <div class="detail-value">${data.physical_params.cig_length || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Tobacco Rod:</div>
+                    <div class="detail-value">${data.physical_params.tobacco_rod_length || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Filter Length:</div>
+                    <div class="detail-value">${data.physical_params.filter_length || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Plug Length:</div>
+                    <div class="detail-value">${data.physical_params.plug_length || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Cig Code:</div>
+                    <div class="detail-value">${data.physical_params.cig_code || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">C_PLG:</div>
+                    <div class="detail-value">${data.physical_params.c_plg || 'N/A'}</div>
+                </div>
+            </div>
+        `;
+
+            $('#skuDetailsContent').html(html);
+
+            // Load key variables
+            Object.keys(data.key_variables).forEach(function (key) {
+                $(`#${key}`).val(data.key_variables[key]);
+            });
+        }
+
+        // Tab switching
+        $(document).on('click', '.detail-tab', function () {
+            const tab = $(this).data('tab');
+            $('.detail-tab, .detail-content').removeClass('active');
+            $(this).addClass('active');
+            $(`.detail-content[data-tab="${tab}"]`).addClass('active');
+        });
+
+        function enableCalculation() {
+            $('#calculateBtn').prop('disabled', false);
+            $('#nplBtn, #optimizerBtn').prop('disabled', false);
+        }
+
+        // Calculate Target
+        $('#calculateBtn').click(function () {
+            const keyVariables = {
+                n_bld: $('#n_bld').val(),
+                p_cu: $('#p_cu').val(),
+                t_vnt: $('#t_vnt').val(),
+                f_pd: $('#f_pd').val(),
+                m_ip: $('#m_ip').val()
+            };
+
+            const calibration = skuDetails ? skuDetails.calibration : {};
+
+            $('#resultsContent').html('<div class="text-center p-4"><div class="spinner"></div><br>Calculating...</div>');
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_calculate_target") }}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    key_variables: keyVariables,
+                    calibration: calibration
+                }),
+                success: function (data) {
+                    displayResults(data);
+                },
+                error: function () {
+                    $('#resultsContent').html('<div class="text-center p-4 text-danger">Calculation error</div>');
+                }
+            });
+        });
+
+        function displayResults(data) {
+            const html = `
+            <div class="results-section">
+                <div class="results-title">Interim Output</div>
+                <div class="results-grid">
+                    <div class="result-item">
+                        <span class="result-label">Stage1 Dilution:</span>
+                        <span class="result-value">${data.interim_output.stage1_dilution}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Stage2 Dilution:</span>
+                        <span class="result-value">${data.interim_output.stage2_dilution}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total Dilution:</span>
+                        <span class="result-value">${data.interim_output.total_dilution}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Filtration %:</span>
+                        <span class="result-value">${data.interim_output.filtration_pct}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="results-title">Output Data</div>
+                <div class="results-grid">
+                    <div class="result-item">
+                        <span class="result-label">W_DRY:</span>
+                        <span class="result-value">${data.output_data.w_dry}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">W_TOB:</span>
+                        <span class="result-value">${data.output_data.w_tob}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">W_CIG:</span>
+                        <span class="result-value">${data.output_data.w_cig}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">W_NTM:</span>
+                        <span class="result-value">${data.output_data.w_ntm}</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="action-btn process-order-btn w-100 mt-3" data-bs-toggle="modal" data-bs-target="#processOrderModal">
+                <i class="bi bi-plus me-2"></i>Create Process Order
+            </button>
+        `;
+
+            $('#resultsContent').html(html);
+        }
+
+        // NPL and Optimizer buttons
+        $('#nplBtn').click(function () {
+            window.location.href = '{{ url_for("npl.index") }}';
+        });
+
+        $('#optimizerBtn').click(function () {
+            window.location.href = '{{ url_for("optimizer.index") }}';
+        });
+
+        // Create Process Order
+        $('#createProcessOrderBtn').click(function () {
+            const processOrderId = $('#processOrderId').val();
+            const processDate = $('#processDate').val();
+
+            if (!processOrderId || !processDate) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            const keyVariables = {
+                n_bld: $('#n_bld').val(),
+                p_cu: $('#p_cu').val(),
+                t_vnt: $('#t_vnt').val(),
+                f_pd: $('#f_pd').val(),
+                m_ip: $('#m_ip').val()
+            };
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_create_process_order") }}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    fg_code: selectedFgCode,
+                    process_order_id: processOrderId,
+                    process_date: processDate,
+                    key_variables: keyVariables
+                }),
+                success: function (data) {
+                    alert('Process Order created successfully!');
+                    $('#processOrderModal').modal('hide');
+                    $('#processOrderForm')[0].reset();
+                },
+                error: function (xhr) {
+                    const error = xhr.responseJSON ? xhr.responseJSON.error : 'Error creating process order';
+                    alert(error);
+                }
+            });
+        });
+
+        // Set default process date to today
+        $('#processDate').val(new Date().toISOString().split('T')[0]);
+
+        // Auto-load initial data
+        loadFgCodes(200, false);
+    });
+</script>
+{% endblock %}

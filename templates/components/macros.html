@@ -1,0 +1,179 @@
+{# Reusable Jinja2 macros for cGR8s components #}
+
+{# ── Pagination ──────────────────────────────────────────── #}
+{% macro pagination(page, pages, endpoint, q='', status='', category='') %}
+{% if pages > 1 %}
+<div class="table-pagination">
+    <div class="pagination-info">
+        Page <strong>{{ page }}</strong> of <strong>{{ pages }}</strong>
+    </div>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for(endpoint, page=page-1, q=q, status=status, category=category) }}"
+                    aria-label="Previous">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% for p in range(1, pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+            {% elif p <= 3 or p> pages - 2 or (p >= page - 1 and p <= page + 1) %} <li class="page-item"><a
+                        class="page-link"
+                        href="{{ url_for(endpoint, page=p, q=q, status=status, category=category) }}">{{ p }}</a></li>
+                    {% elif p == 4 or p == pages - 2 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if page >= pages %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for(endpoint, page=page+1, q=q, status=status, category=category) }}"
+                            aria-label="Next">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# ── Status Badge ────────────────────────────────────────── #}
+{% macro status_badge(status) %}
+{% set cls_map = {
+'Draft': 'badge-draft',
+'Calculated': 'badge-calculated',
+'QA Pending': 'badge-qa-pending',
+'QA Updated': 'badge-qa-updated',
+'Completed': 'badge-completed',
+'Report Generated': 'badge-report-generated',
+'pending_review': 'badge-qa-pending',
+'approved': 'badge-completed',
+'rejected': 'badge-draft',
+'Pending': 'badge-qa-pending',
+'Processing': 'badge-calculated',
+'Failed': 'bg-danger',
+} %}
+<span class="badge {{ cls_map.get(status, 'bg-secondary') }}">{{ status }}</span>
+{% endmacro %}
+
+{# ── Search Bar (Enhanced) ───────────────────────────────── #}
+{% macro search_bar(endpoint, query='', placeholder='Search...') %}
+<form method="get" action="{{ url_for(endpoint) }}" class="search-bar">
+    <div class="search-input-wrap">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="{{ placeholder }}">
+        {% if query %}
+        <a href="{{ url_for(endpoint) }}" class="search-clear" title="Clear search"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Search</button>
+</form>
+{% endmacro %}
+
+{# ── Table Toolbar (wraps search + actions + filter count) ─ #}
+{% macro table_toolbar(search_endpoint=None, query='', placeholder='Search...', count=None, total=None) %}
+<div class="table-toolbar">
+    <div class="toolbar-left">
+        {% if search_endpoint %}
+        {{ search_bar(search_endpoint, query, placeholder) }}
+        {% endif %}
+        {% if count is not none and total is not none %}
+        <span class="result-count">
+            Showing <strong>{{ count }}</strong> of <strong>{{ total }}</strong>
+        </span>
+        {% endif %}
+    </div>
+    <div class="toolbar-right">
+        {{ caller() if caller is defined else '' }}
+    </div>
+</div>
+{% endmacro %}
+
+{# ── Empty State ─────────────────────────────────────────── #}
+{% macro empty_state(message, create_url=None, create_label='Create') %}
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <i class="bi bi-inbox"></i>
+    </div>
+    <p class="empty-state-text">{{ message }}</p>
+    {% if create_url %}
+    <a href="{{ create_url }}" class="btn btn-primary mt-2">
+        <i class="bi bi-plus-lg"></i> {{ create_label }}
+    </a>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ── Form Field ──────────────────────────────────────────── #}
+{% macro form_field(name, label, value='', type='text', required=false, readonly=false, errors=[], step=None,
+placeholder='', help_text='') %}
+<div class="mb-3">
+    <label for="{{ name }}" class="form-label">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif
+        %}</label>
+    <input type="{{ type }}"
+        class="form-control {% if name in errors|map(attribute='field')|list %}is-invalid{% endif %}" id="{{ name }}"
+        name="{{ name }}" value="{{ value }}" {% if required %}required{% endif %} {% if readonly %}readonly{% endif %}
+        {% if step %}step="{{ step }}" {% endif %}{% if placeholder %}placeholder="{{ placeholder }}" {% endif %}>
+    {% for e in errors if e.field == name %}
+    <div class="invalid-feedback">{{ e.message }}</div>
+    {% endfor %}
+    {% if help_text %}
+    <div class="form-text">{{ help_text }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ── Select Field ────────────────────────────────────────── #}
+{% macro select_field(name, label, options, selected='', required=false, errors=[], placeholder='-- Select --',
+help_text='') %}
+<div class="mb-3">
+    <label for="{{ name }}" class="form-label">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif
+        %}</label>
+    <select class="form-select {% if name in errors|map(attribute='field')|list %}is-invalid{% endif %}" id="{{ name }}"
+        name="{{ name }}" {% if required %}required{% endif %}>
+        <option value="">{{ placeholder }}</option>
+        {% for opt in options %}
+        <option value="{{ opt.value }}" {% if opt.value|string==selected|string %}selected{% endif %}>{{ opt.label }}
+        </option>
+        {% endfor %}
+    </select>
+    {% for e in errors if e.field == name %}
+    <div class="invalid-feedback">{{ e.message }}</div>
+    {% endfor %}
+    {% if help_text %}
+    <div class="form-text">{{ help_text }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ── Form Section ────────────────────────────────────────── #}
+{% macro form_section(title, icon='') %}
+<div class="form-section">
+    {% if title %}
+    <div class="form-section-title">
+        {% if icon %}<i class="bi bi-{{ icon }}"></i>{% endif %}
+        {{ title }}
+    </div>
+    {% endif %}
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{# ── Form Actions ────────────────────────────────────────── #}
+{% macro form_actions(cancel_url, submit_label='Save', submit_icon='bi-save') %}
+<div class="form-actions">
+    <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary"><i class="bi {{ submit_icon }}"></i> {{ submit_label }}</button>
+</div>
+{% endmacro %}
+
+{# ── Delete Button ───────────────────────────────────────── #}
+{% macro delete_button(url, csrf_token) %}
+<form method="post" action="{{ url }}" class="d-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Are you sure you want to delete this?">
+        <i class="bi bi-trash"></i>
+    </button>
+</form>
+{% endmacro %}

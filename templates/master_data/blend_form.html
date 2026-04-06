@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}{{ 'Edit' if blend else 'New' }} Blend{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.blends') }}">Blends</a>
+<span class="separator">/</span>
+<span class="current">{{ 'Edit' if blend else 'New' }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-diagram-3"></i> {{ 'Edit' if blend else 'New' }} Blend</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post"
+            action="{{ url_for('master_data.blend_edit', id=blend.id) if blend else url_for('master_data.blend_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if blend %}
+            <input type="hidden" name="row_version" value="{{ blend.row_version }}">
+            {% endif %}
+
+            {{ form_field('blend_code', 'Blend Code', data.get('blend_code', blend.blend_code if blend else ''),
+            required=true, errors=errors) }}
+            {{ form_field('blend_name', 'Blend Name', data.get('blend_name', blend.blend_name if blend else ''),
+            required=true, errors=errors) }}
+            {{ form_field('blend_gtin', 'GTIN', data.get('blend_gtin', blend.blend_gtin if blend else ''),
+            errors=errors) }}
+            {{ form_field('n_bld', 'N_BLD', data.get('n_bld', blend.n_bld if blend else ''), type='number', step='0.01',
+            errors=errors) }}
+            {{ form_field('description', 'Description', data.get('description', blend.description if blend else ''),
+            errors=errors) }}
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ 'checked' if
+                        data.get('is_active', blend.is_active if blend else true) }}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
+            </div>
+
+            {{ form_actions(url_for('master_data.blends')) }}
+        </form>
+    </div>
+</div>
+{% endblock %}

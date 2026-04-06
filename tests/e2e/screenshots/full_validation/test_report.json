@@ -1,0 +1,22 @@
+{
+  "data_counts": {
+    "blends": 25,
+    "physical_params": 25,
+    "calibration": 25,
+    "lookups": 25,
+    "machines": 20,
+    "skus": 25,
+    "tobacco_analysis": 25,
+    "size_cu": 7,
+    "kp_tolerance": 5,
+    "plug_length_cuts": 5,
+    "app_fields": 20,
+    "targets_limits": 25,
+    "fg_codes": 500
+  },
+  "errors": [],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+  ],
+  "screenshots_dir": "C:\\Users\\MuhammedNizar\\OneDrive - AWGTC\\Desktop\\NIZAR\\AWGTC\\cGR8s\\tests\\e2e\\screenshots\\full_validation"
+}

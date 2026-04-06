@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, empty_state, table_toolbar %}
+{% block title %}Targets &amp; Limits{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.blends') }}">Master Data</a>
+<span class="separator">/</span>
+<span class="current">Targets &amp; Limits</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-bullseye"></i> Targets &amp; Limits</h2>
+    <span class="badge bg-info fs-6">{{ total }} records</span>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        {{ search_bar('master_data.targets_limits') }}
+    </div>
+    <div class="card-body p-0">
+        {# ── Column Group Legend ──────────────────────────── #}
+        <div class="tl-legend">
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-identity"></span> Identity</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-circumference"></span> Circumference</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-pdo"></span> PDO</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-ventilation"></span> Tip Ventilation</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-dimensions"></span> Dimensions</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-weight"></span> Weight</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-filter"></span> Filter PD</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-hardness"></span> Hardness</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-filterspec"></span> Filter Specs</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-moisture"></span> Moisture</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-ov"></span> Pack OV</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-ssi"></span> SSI</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-blend"></span> Blend Properties</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-misc"></span> Misc</span>
+            <span class="tl-legend-item"><span class="tl-legend-dot tl-dot-nic"></span> Target Nicotine</span>
+        </div>
+
+        {% if items %}
+        <div class="tl-table-wrap">
+            <table class="table table-hover table-sm align-middle table-bordered tl-table mb-0">
+                <thead>
+                    {# ── Group Header Row ─────────────────────── #}
+                    <tr class="tl-group-row">
+                        <th colspan="2" class="tl-frozen-col tl-frozen-group tl-hdr-identity">Frozen</th>
+                        <th colspan="9" class="tl-hdr-identity">Identity</th>
+                        <th colspan="4" class="tl-hdr-circumference">Circumference</th>
+                        <th colspan="3" class="tl-hdr-pdo">PDO</th>
+                        <th colspan="4" class="tl-hdr-ventilation">Tip Ventilation</th>
+                        <th colspan="2" class="tl-hdr-dimensions">Dimensions</th>
+                        <th colspan="2" class="tl-hdr-weight">Weight</th>
+                        <th colspan="3" class="tl-hdr-filter">Filter PD</th>
+                        <th colspan="5" class="tl-hdr-hardness">Hardness</th>
+                        <th colspan="4" class="tl-hdr-filterspec">Filter Specs</th>
+                        <th colspan="6" class="tl-hdr-moisture">Moisture</th>
+                        <th colspan="3" class="tl-hdr-ov">Pack OV</th>
+                        <th colspan="3" class="tl-hdr-ssi">SSI</th>
+                        <th colspan="5" class="tl-hdr-blend">Blend Properties</th>
+                        <th colspan="3" class="tl-hdr-misc">Misc</th>
+                        <th colspan="1" class="tl-hdr-nic">Nic</th>
+                    </tr>
+                    {# ── Column Header Row ────────────────────── #}
+                    <tr class="tl-column-row">
+                        <th class="tl-frozen-col tl-frozen-idx">#</th>
+                        <th class="tl-frozen-col tl-frozen-fg">FG Code</th>
+                        <th>Cig Code</th>
+                        <th>Blend Code</th>
+                        <th>Filter Code</th>
+                        <th>Blend</th>
+                        <th>Brand</th>
+                        <th>Format</th>
+                        <th>Family</th>
+                        <th>FG GTIN</th>
+                        <th>Blend GTIN</th>
+                        <th class="tl-col-circumference">Mean</th>
+                        <th class="tl-col-circumference">UL</th>
+                        <th class="tl-col-circumference">LL</th>
+                        <th class="tl-col-circumference">SD</th>
+                        <th class="tl-col-pdo">PDO</th>
+                        <th class="tl-col-pdo">UL</th>
+                        <th class="tl-col-pdo">LL</th>
+                        <th class="tl-col-ventilation">Vent</th>
+                        <th class="tl-col-ventilation">UL</th>
+                        <th class="tl-col-ventilation">LL</th>
+                        <th class="tl-col-ventilation">SD</th>
+                        <th class="tl-col-dimensions">Rod Len</th>
+                        <th class="tl-col-dimensions">Cig Len</th>
+                        <th class="tl-col-weight">NTM Wt</th>
+                        <th class="tl-col-weight">Wt SD</th>
+                        <th class="tl-col-filter">PD</th>
+                        <th class="tl-col-filter">UL</th>
+                        <th class="tl-col-filter">LL</th>
+                        <th class="tl-col-hardness">Hard</th>
+                        <th class="tl-col-hardness">UL</th>
+                        <th class="tl-col-hardness">LL</th>
+                        <th class="tl-col-hardness">Corr</th>
+                        <th class="tl-col-hardness">Loose</th>
+                        <th class="tl-col-filterspec">Flt Len</th>
+                        <th class="tl-col-filterspec">Cuts</th>
+                        <th class="tl-col-filterspec">Plug Len</th>
+                        <th class="tl-col-filterspec">Flt Wt</th>
+                        <th class="tl-col-moisture">C48</th>
+                        <th class="tl-col-moisture">C48 UL</th>
+                        <th class="tl-col-moisture">C48 LL</th>
+                        <th class="tl-col-moisture">Maker</th>
+                        <th class="tl-col-moisture">Mkr UL</th>
+                        <th class="tl-col-moisture">Mkr LL</th>
+                        <th class="tl-col-ov">OV</th>
+                        <th class="tl-col-ov">UL</th>
+                        <th class="tl-col-ov">LL</th>
+                        <th class="tl-col-ssi">SSI</th>
+                        <th class="tl-col-ssi">UL</th>
+                        <th class="tl-col-ssi">LL</th>
+                        <th class="tl-col-blend">Lam CPI</th>
+                        <th class="tl-col-blend">Fill Pwr</th>
+                        <th class="tl-col-blend">FP UL</th>
+                        <th class="tl-col-blend">FP LL</th>
+                        <th class="tl-col-blend">FP Corr</th>
+                        <th class="tl-col-misc">Pan %</th>
+                        <th class="tl-col-misc">Flt Desc</th>
+                        <th class="tl-col-misc">Plug CU</th>
+                        <th class="tl-col-misc">TOW</th>
+                        <th class="tl-col-nic">Nic</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fg in items %}
+                    <tr>
+                        <td class="tl-frozen-col tl-frozen-idx">{{ (page - 1) * per_page + loop.index }}</td>
+                        <td class="tl-frozen-col tl-frozen-fg"><strong>{{ fg.fg_code }}</strong></td>
+                        <td>{{ fg.cig_code or '—' }}</td>
+                        <td>{{ fg.blend_code or '—' }}</td>
+                        <td>{{ fg.filter_code or '—' }}</td>
+                        <td>{{ fg.blend or '—' }}</td>
+                        <td>{{ fg.brand or '—' }}</td>
+                        <td>{{ fg.format or '—' }}</td>
+                        <td>{{ fg.family_name or '—' }}</td>
+                        <td>{{ fg.fg_gtin or '—' }}</td>
+                        <td>{{ fg.blend_gtin or '—' }}</td>
+                        <td>{{ '%.4f' % fg.circumference_mean if fg.circumference_mean is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.circumference_mean_ul if fg.circumference_mean_ul is not none else '—' }}
+                        </td>
+                        <td>{{ '%.4f' % fg.circumference_mean_ll if fg.circumference_mean_ll is not none else '—' }}
+                        </td>
+                        <td>{{ '%.4f' % fg.circumference_sd_max if fg.circumference_sd_max is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.cig_pdo if fg.cig_pdo is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.cig_pdo_ul if fg.cig_pdo_ul is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.cig_pdo_ll if fg.cig_pdo_ll is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.tip_ventilation if fg.tip_ventilation is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.tip_ventilation_ul if fg.tip_ventilation_ul is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.tip_ventilation_ll if fg.tip_ventilation_ll is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.tip_ventilation_sd_max if fg.tip_ventilation_sd_max is not none else '—' }}
+                        </td>
+                        <td>{{ '%.2f' % fg.tobacco_rod_length if fg.tobacco_rod_length is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.cig_length if fg.cig_length is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.ntm_wt_mean if fg.ntm_wt_mean is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.cig_wt_sd_max if fg.cig_wt_sd_max is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filter_pd if fg.filter_pd is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filter_pd_ul if fg.filter_pd_ul is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filter_pd_ll if fg.filter_pd_ll is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.cig_hardness if fg.cig_hardness is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.cig_hardness_ul if fg.cig_hardness_ul is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.cig_hardness_ll if fg.cig_hardness_ll is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.cig_corrected_hardness if fg.cig_corrected_hardness is not none else '—' }}
+                        </td>
+                        <td>{{ '%.2f' % fg.loose_shorts_max if fg.loose_shorts_max is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.filter_length if fg.filter_length is not none else '—' }}</td>
+                        <td>{{ fg.c_plg if fg.c_plg is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.plug_length if fg.plug_length is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filter_weight if fg.filter_weight is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.c48_moisture if fg.c48_moisture is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.c48_moisture_ul if fg.c48_moisture_ul is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.c48_moisture_ll if fg.c48_moisture_ll is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.maker_moisture if fg.maker_moisture is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.maker_moisture_ul if fg.maker_moisture_ul is not none else '—' }}</td>
+                        <td>{{ '%.2f' % fg.maker_moisture_ll if fg.maker_moisture_ll is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.pack_ov if fg.pack_ov is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.pack_ov_ul if fg.pack_ov_ul is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.pack_ov_ll if fg.pack_ov_ll is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.ssi if fg.ssi is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.ssi_ul if fg.ssi_ul is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.ssi_ll if fg.ssi_ll is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.lamina_cpi if fg.lamina_cpi is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filling_power if fg.filling_power is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filling_power_ul if fg.filling_power_ul is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filling_power_ll if fg.filling_power_ll is not none else '—' }}</td>
+                        <td>{{ '%.4f' % fg.filling_power_corrected_ul if fg.filling_power_corrected_ul is not none else
+                            '—' }}</td>
+                        <td>{{ '%.2f' % fg.pan_pct_max if fg.pan_pct_max is not none else '—' }}</td>
+                        <td>{{ fg.filter_desc or '—' }}</td>
+                        <td>{{ '%.2f' % fg.plug_wrap_cu if fg.plug_wrap_cu is not none else '—' }}</td>
+                        <td>{{ fg.tow_used or '—' }}</td>
+                        <td class="tl-col-nic"><strong>{{ '%.4f' % fg.target_nic if fg.target_nic is not none else '—'
+                                }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if total_pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, total_pages, 'master_data.targets_limits') }}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if not items %}
+{{ empty_state('No Targets & Limits data', 'Import data to populate this table.') }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}NPL Results{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('npl.index') }}">NPL</a>
+<span class="separator">/</span>
+<span class="current">Results</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-check-circle"></i> NPL Results – {{ po.process_order_number }}</h2>
+    <a href="{{ url_for('process_orders.detail', id=po.id) }}" class="btn btn-outline-primary">Back to Order</a>
+</div>
+
+{# ── KPI Cards ────────────────────────────────────────────── #}
+<div class="row g-3">
+    <div class="col-md-3">
+        <div
+            class="card kpi-card {% if result.npl_pct > 5 %}accent-danger{% elif result.npl_pct > 3 %}accent-warning{% else %}accent-secondary{% endif %}">
+            <div class="card-body text-center">
+                <div class="kpi-label">NPL %</div>
+                <div class="kpi-value">{{ '%.6f'|format(result.npl_pct) }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">NPL (kg)</div>
+                <div class="kpi-value">{{ '%.6f'|format(result.npl_kg) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card accent-secondary">
+            <div class="card-body text-center">
+                <div class="kpi-label">TAC (kg)</div>
+                <div class="kpi-value">{{ '%.2f'|format(result.tac) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card accent-secondary">
+            <div class="card-body text-center">
+                <div class="kpi-label">TTC (kg)</div>
+                <div class="kpi-value">{{ '%.2f'|format(result.ttc) }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Calculation Details ──────────────────────────────────── #}
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bar-chart"></i> Calculation Breakdown</div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>T_USD (Tobacco Used)</th>
+                        <td class="text-end">{{ '%.3f'|format(result.t_usd) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Actual Consumption</th>
+                        <td class="text-end">{{ '%.3f'|format(result.actual_consumption) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Theoretical Consumption</th>
+                        <td class="text-end">{{ '%.3f'|format(result.theoretical_consumption) }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clipboard-data"></i> Input Summary</div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>T_ISS</th>
+                        <td class="text-end">{{ input_data.get('t_iss', 0) }}</td>
+                    </tr>
+                    <tr>
+                        <th>T_UN</th>
+                        <td class="text-end">{{ input_data.get('t_un', 0) }}</td>
+                    </tr>
+                    <tr>
+                        <th>N_MC × N_CG</th>
+                        <td class="text-end">{{ input_data.get('n_mc', 0) }} × {{ input_data.get('n_cg', 0) }}</td>
+                    </tr>
+                    <tr>
+                        <th>M_DSP / M_DST</th>
+                        <td class="text-end">{{ input_data.get('m_dsp', 0) }} / {{ input_data.get('m_dst', 0) }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Key Variables Used ───────────────────────────────────── #}
+<div class="card mt-3">
+    <div class="card-header"><i class="bi bi-key"></i> Key Variables Used</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-2"><span class="text-muted">N_BLD:</span> {{ '%.3f'|format(ref.n_bld) }}</div>
+            <div class="col-md-2"><span class="text-muted">P_CU:</span> {{ '%.3f'|format(ref.p_cu) }}</div>
+            <div class="col-md-2"><span class="text-muted">T_VNT:</span> {{ '%.3f'|format(ref.t_vnt) }}</div>
+            <div class="col-md-2"><span class="text-muted">F_PD:</span> {{ '%.3f'|format(ref.f_pd) }}</div>
+            <div class="col-md-2"><span class="text-muted">M_IP:</span> {{ '%.3f'|format(ref.m_ip) }}</div>
+            <div class="col-md-2"><span class="text-muted">W_TOB:</span> {{ '%.3f'|format(ref.w_tob) }} mg</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import pagination, status_badge, empty_state %}
+{% block title %}Pending QA{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('qa.index') }}">QA Workflow</a>
+<span class="separator">/</span>
+<span class="current">Pending</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-clock"></i> Pending QA</h2>
+    <a href="{{ url_for('qa.index') }}" class="btn btn-outline-primary">All QA</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>FG Code</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in items %}
+                    <tr>
+                        <td>{{ po.process_order_number }}</td>
+                        <td>{{ po.fg_code_id }}</td>
+                        <td>{{ status_badge(po.status) }}</td>
+                        <td><a href="{{ url_for('qa.enter', process_order_id=po.id) }}"
+                                class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i> Enter QA</a></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4">{{ empty_state('No orders pending QA') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

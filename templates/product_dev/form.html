@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{% if edit|default(false) %}Edit{% else %}New{% endif %} Product Dev Request{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('product_dev.index') }}">Product Dev</a>
+<span class="separator">/</span>
+<span class="current">{% if edit|default(false) %}Edit{% else %}New{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-flask"></i> {% if edit|default(false) %}Edit{% else %}New{% endif %} Product Dev Request</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p class="text-muted">Form fields will be wired once the data model is ready.</p>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{{ url_for('product_dev.index') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

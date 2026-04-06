@@ -1,0 +1,1432 @@
+{% extends "base.html" %}
+{% block title %}Data Grid{% endblock %}
+
+{# ══════════════════════════════════════════════════════════════════
+Macro: QA Analysis grid – 38 editable columns
+══════════════════════════════════════════════════════════════════ #}
+{% macro qa_grid(grid_id, rows) %}
+<thead>
+    <tr>
+        {% set cols = ['RID','QR Date (D-)','Prod. Date (D)','NPL Date (D+1)','Process Order',
+        'SKU','SKU Desc','SKU GTN','Blend Code','Blend Desc','Blend GTIN','Cig. Code','UID',
+        'Pack OV','Lamina CPI','Filling Power','Filling Power Corr','Maker Moisture','SSI',
+        'PAN%','Total Cig. Length','Circumference Mean','Circumference SD','Cig Dia',
+        'TIP VF','TIP Vf SD','Filter PD Mean','W_NTM','Plug Wrap CU','TOW',
+        'Cig PDO','Cig. Hardness','Cig. Corr. Hardness','Loose Shorts','Plug Length',
+        'MC','Company','Status'] %}
+        {% for col in cols %}
+        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
+        {% endfor %}
+    </tr>
+    <tr>
+        {% for i in range(38) %}
+        <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter...{% endif %}"
+                oninput="colFilter('{{ grid_id }}',{{ i }},this.value)">
+        </th>
+        {% endfor %}
+    </tr>
+</thead>
+<tbody>
+    {% for r in rows %}
+    {% set src = r.qa if r.qa else r.prev_qa %}
+    <tr data-po-id="{{ r.po.id }}" data-po-number="{{ r.po.process_order_number }}">
+        <td>{{ loop.index }}</td>
+        <td class="ed"><input type="date" class="cell-input" data-field="qr_date" data-col="1"
+                value="{{ r.qa.qr_date.strftime('%Y-%m-%d') if r.qa and r.qa.qr_date else (r.qr_date.strftime('%Y-%m-%d') if r.qr_date else '') }}">
+        </td>
+        <td>{{ r.po.process_date.strftime('%d %b %Y') if r.po.process_date else '–' }}</td>
+        <td class="ed"><input type="date" class="cell-input" data-field="npl_date" data-col="3"
+                value="{{ r.qa.npl_date.strftime('%Y-%m-%d') if r.qa and r.qa.npl_date else (r.npl_date.strftime('%Y-%m-%d') if r.npl_date else '') }}">
+        </td>
+        <td class="uid-cell">{{ r.po.process_order_number }}</td>
+        <td>{{ r.fg.fg_code if r.fg else '–' }}</td>
+        <td>{{ r.fg.brand if r.fg else '–' }}</td>
+        <td>{{ r.fg.fg_gtin if r.fg and r.fg.fg_gtin else '–' }}</td>
+        <td>{{ r.fg.blend_code if r.fg and r.fg.blend_code else '–' }}</td>
+        <td>{{ r.fg.blend if r.fg else '–' }}</td>
+        <td>{{ r.fg.blend_gtin if r.fg and r.fg.blend_gtin else '–' }}</td>
+        <td>{{ r.fg.cig_code if r.fg and r.fg.cig_code else '–' }}</td>
+        <td class="uid-cell">{{ r.uid }}</td>
+        {# ── Editable cells: Pack OV (col 13) through Company (col 36) ── #}
+        <td class="num ed"><input type="text" class="cell-input" data-field="pack_ov" data-col="13"
+                value="{{ '%.2f'|format(src.pack_ov) if src and src.pack_ov else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="lamina_cpi" data-col="14"
+                value="{{ '%.2f'|format(src.lamina_cpi) if src and src.lamina_cpi else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="filling_power" data-col="15"
+                value="{{ '%.2f'|format(src.filling_power) if src and src.filling_power else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="filling_power_corr" data-col="16"
+                value="{{ '%.2f'|format(src.filling_power_corr) if src and src.filling_power_corr else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="maker_moisture" data-col="17"
+                value="{{ '%.2f'|format(src.maker_moisture) if src and src.maker_moisture else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="ssi" data-col="18"
+                value="{{ '%.2f'|format(src.ssi) if src and src.ssi else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="pan_pct" data-col="19"
+                value="{{ '%.2f'|format(src.pan_pct) if src and src.pan_pct else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="total_cig_length" data-col="20"
+                value="{{ '%.3f'|format(src.total_cig_length) if src and src.total_cig_length else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="circumference_mean" data-col="21"
+                value="{{ '%.3f'|format(src.circumference_mean) if src and src.circumference_mean else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="circumference_sd" data-col="22"
+                value="{{ '%.4f'|format(src.circumference_sd) if src and src.circumference_sd else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_dia" data-col="23"
+                value="{{ '%.3f'|format(src.cig_dia) if src and src.cig_dia else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="tip_vf" data-col="24"
+                value="{{ '%.2f'|format(src.tip_vf) if src and src.tip_vf else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="tip_vf_sd" data-col="25"
+                value="{{ '%.4f'|format(src.tip_vf_sd) if src and src.tip_vf_sd else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="filter_pd_mean" data-col="26"
+                value="{{ '%.3f'|format(src.filter_pd_mean) if src and src.filter_pd_mean else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="w_ntm" data-col="27"
+                value="{{ '%.4f'|format(src.w_ntm) if src and src.w_ntm else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="plug_wrap_cu" data-col="28"
+                value="{{ '%.2f'|format(src.plug_wrap_cu) if src and src.plug_wrap_cu else '' }}"></td>
+        <td class="ed"><input type="text" class="cell-input" data-field="tow" data-col="29"
+                value="{{ src.tow if src and src.tow else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_pdo" data-col="30"
+                value="{{ '%.3f'|format(src.cig_pdo) if src and src.cig_pdo else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_hardness" data-col="31"
+                value="{{ '%.3f'|format(src.cig_hardness) if src and src.cig_hardness else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="cig_corr_hardness" data-col="32"
+                value="{{ '%.3f'|format(src.cig_corr_hardness) if src and src.cig_corr_hardness else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="loose_shorts" data-col="33"
+                value="{{ '%.2f'|format(src.loose_shorts) if src and src.loose_shorts else '' }}"></td>
+        <td class="num ed"><input type="text" class="cell-input" data-field="plug_length" data-col="34"
+                value="{{ '%.3f'|format(src.plug_length) if src and src.plug_length else '' }}"></td>
+        <td class="ed"><input type="text" class="cell-input" data-field="mc" data-col="35"
+                value="{{ src.mc if src and src.mc else '' }}"></td>
+        <td class="ed"><input type="text" class="cell-input" data-field="company" data-col="36"
+                value="{{ src.company if src and src.company else '' }}"></td>
+        <td>{{ r.qa.status if r.qa else 'Not entered' }}</td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="38" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No QA data</td>
+    </tr>
+    {% endfor %}
+</tbody>
+{% endmacro %}
+
+{# ══════════════════════════════════════════════════════════════════
+Macro: Production Data grid – 88 read-only columns (A-CJ)
+Reference | Key Vars | Constants | NC/NT | NTM/TW | NPL Input |
+TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Metadata
+══════════════════════════════════════════════════════════════════ #}
+{% macro production_grid(grid_id, rows) %}
+<thead>
+    <tr>
+        {% set cols = ['RID','QR Date (D-)','Prod. Date (D)','NPL Date (D+1)','Process Order',
+        'SKU','SKU Desc','SKU GTN','Blend Code','Blend Desc','Blend GTIN','Cig. Code','UID',
+        'NBLD','PCU','VF','FPD','MIP',
+        'α','β','γ','δ',
+        'NC','NT','NTM','TW',
+        'TISS','TUN','RW1','RW2','RW3','RW4','RW5','WM','WP','WQ','NW','NMC','NCG','T USD','M DSP','M DST',
+        'S1','S2','TD','F','NS1','NS2','NTD','NF','NTDRY',
+        'W DRY','W TOB','W CIG',
+        'TAC','TTC','NPL%','NPL KG',
+        'FG+Blend',
+        'Pack OV','Status','Next Row#','Revised Weight',
+        'N_BLD','P_CU','V_F','F_PD','M_IP',
+        'S1','S2','TD','F','NS1','NS2','NTD','NF','NTDRY',
+        'W DRY','W TOB','W CIG','Stage No','NPL'] %}
+        {% for col in cols %}
+        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
+        {% endfor %}
+    </tr>
+    <tr>
+        {% for i in range(cols|length) %}
+        <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter{% endif %}"
+                oninput="colFilter('{{ grid_id }}',{{ i }},this.value)"></th>
+        {% endfor %}
+    </tr>
+</thead>
+<tbody>
+    {% for r in rows %}
+    <tr style="cursor:pointer" onclick="window.location='{{ url_for('process_orders.detail', id=r.po.id) }}'">
+        {# ── Reference (13 cols) ── #}
+        <td>{{ loop.index }}</td>
+        <td>{{ r.qr_date.strftime('%d %b %Y') if r.qr_date else '–' }}</td>
+        <td>{{ r.po.process_date.strftime('%d %b %Y') if r.po.process_date else '–' }}</td>
+        <td>{{ r.npl_date.strftime('%d %b %Y') if r.npl_date else '–' }}</td>
+        <td class="uid-cell">{{ r.po.process_order_number }}</td>
+        <td>{{ r.fg.fg_code if r.fg else '–' }}</td>
+        <td>{{ r.fg.brand if r.fg else '–' }}</td>
+        <td>{{ r.fg.fg_gtin if r.fg and r.fg.fg_gtin else '–' }}</td>
+        <td>{{ r.fg.blend_code if r.fg and r.fg.blend_code else '–' }}</td>
+        <td>{{ r.fg.blend if r.fg else '–' }}</td>
+        <td>{{ r.fg.blend_gtin if r.fg and r.fg.blend_gtin else '–' }}</td>
+        <td>{{ r.fg.cig_code if r.fg and r.fg.cig_code else '–' }}</td>
+        <td class="uid-cell">{{ r.uid }}</td>
+        {# ── Key Variables (5) – TW inputs ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.input_n_bld) if r.tw and r.tw.input_n_bld is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_p_cu) if r.tw and r.tw.input_p_cu is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_t_vnt) if r.tw and r.tw.input_t_vnt is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_f_pd) if r.tw and r.tw.input_f_pd is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_m_ip) if r.tw and r.tw.input_m_ip is not none else '–' }}</td>
+        {# ── Constants (4) – TW inputs ── #}
+        <td class="num">{{ '%.6f'|format(r.tw.input_alpha) if r.tw and r.tw.input_alpha is not none else '–' }}</td>
+        <td class="num">{{ '%.6f'|format(r.tw.input_beta) if r.tw and r.tw.input_beta is not none else '–' }}</td>
+        <td class="num">{{ '%.6f'|format(r.tw.input_gamma) if r.tw and r.tw.input_gamma is not none else '–' }}</td>
+        <td class="num">{{ '%.6f'|format(r.tw.input_delta) if r.tw and r.tw.input_delta is not none else '–' }}</td>
+        {# ── NC, NT (2) – FG Code ── #}
+        <td class="num">{{ '%.2f'|format(r.fg.c_plg) if r.fg and r.fg.c_plg is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.fg.target_nic) if r.fg and r.fg.target_nic is not none else '–' }}</td>
+        {# ── NTM, TW (2) ── #}
+        <td class="num">{{ '%.4f'|format(r.fg.ntm_wt_mean) if r.fg and r.fg.ntm_wt_mean is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.tw) if r.tw and r.tw.tw is not none else '–' }}</td>
+        {# ── NPL Input (16) ── #}
+        {% set ni = r.npl_input %}
+        <td class="num">{{ '%.2f'|format(ni.t_iss) if ni and ni.t_iss is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.t_un) if ni and ni.t_un is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_dst) if ni and ni.l_dst is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_win) if ni and ni.l_win is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_flr) if ni and ni.l_flr is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_srt) if ni and ni.l_srt is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_dt) if ni and ni.l_dt is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.r_mkg) if ni and ni.r_mkg is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.r_pkg) if ni and ni.r_pkg is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.r_ndt) if ni and ni.r_ndt is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.n_w) if ni and ni.n_w is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.n_mc) if ni and ni.n_mc is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.n_cg) if ni and ni.n_cg is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.t_usd) if ni and ni.t_usd is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.m_dsp) if ni and ni.m_dsp is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.m_dst) if ni and ni.m_dst is not none else '–' }}</td>
+        {# ── TW Results (9) – Dilution & Nicotine stages ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.stage1_dilution) if r.tw and r.tw.stage1_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage2_dilution) if r.tw and r.tw.stage2_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_dilution) if r.tw and r.tw.total_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.filtration_pct) if r.tw and r.tw.filtration_pct is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage1_pacifying_nicotine_demand) if r.tw and
+            r.tw.stage1_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage2_pacifying_nicotine_demand) if r.tw and
+            r.tw.stage2_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_pacifying_nicotine_demand) if r.tw and
+            r.tw.total_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_filtration_pct) if r.tw and r.tw.total_filtration_pct is not none
+            else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_nicotine_demand) if r.tw and r.tw.total_nicotine_demand is not none
+            else '–' }}</td>
+        {# ── TW Output (3) ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.w_dry) if r.tw and r.tw.w_dry is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.w_tob) if r.tw and r.tw.w_tob is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.w_cig) if r.tw and r.tw.w_cig is not none else '–' }}</td>
+        {# ── NPL Results (4) ── #}
+        <td class="num">{{ '%.4f'|format(r.npl.tac) if r.npl and r.npl.tac is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.npl.ttc) if r.npl and r.npl.ttc is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.npl.npl_pct) if r.npl and r.npl.npl_pct is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.npl.npl_kg) if r.npl and r.npl.npl_kg is not none else '–' }}</td>
+        {# ── FG+Blend (1) ── #}
+        <td>{{ (r.fg.fg_code ~ ', ' ~ r.fg.blend_code) if r.fg and r.fg.fg_code and r.fg.blend_code else '–' }}</td>
+        {# ── Pack OV + Status (2) ── #}
+        <td class="num">{{ '%.2f'|format(r.qa.pack_ov) if r.qa and r.qa.pack_ov is not none else '–' }}</td>
+        <td>{{ r.po.status }}</td>
+        {# ── Next Row# + Revised Weight (2) ── #}
+        <td class="num">{{ loop.index }}</td>
+        <td class="num">{{ '%.2f'|format(r.tw.tw) if r.tw and r.tw.tw is not none else '–' }}</td>
+        {# ── Repeated Key Vars (5) ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.input_n_bld) if r.tw and r.tw.input_n_bld is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_p_cu) if r.tw and r.tw.input_p_cu is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_t_vnt) if r.tw and r.tw.input_t_vnt is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_f_pd) if r.tw and r.tw.input_f_pd is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_m_ip) if r.tw and r.tw.input_m_ip is not none else '–' }}</td>
+        {# ── Repeated TW Results (9) ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.stage1_dilution) if r.tw and r.tw.stage1_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage2_dilution) if r.tw and r.tw.stage2_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_dilution) if r.tw and r.tw.total_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.filtration_pct) if r.tw and r.tw.filtration_pct is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage1_pacifying_nicotine_demand) if r.tw and
+            r.tw.stage1_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage2_pacifying_nicotine_demand) if r.tw and
+            r.tw.stage2_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_pacifying_nicotine_demand) if r.tw and
+            r.tw.total_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_filtration_pct) if r.tw and r.tw.total_filtration_pct is not none
+            else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_nicotine_demand) if r.tw and r.tw.total_nicotine_demand is not none
+            else '–' }}</td>
+        {# ── Repeated TW Output (3) ── #}
+        <td class="num">{{ '%.2f'|format(r.tw.w_dry) if r.tw and r.tw.w_dry is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.tw.w_tob) if r.tw and r.tw.w_tob is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.tw.w_cig) if r.tw and r.tw.w_cig is not none else '–' }}</td>
+        {# ── Stage No + NPL (2) ── #}
+        <td class="num">–</td>
+        <td class="num">{{ '%.2f'|format(r.npl.npl_pct) if r.npl and r.npl.npl_pct is not none else '–' }}</td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="82" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No production data</td>
+    </tr>
+    {% endfor %}
+</tbody>
+{% endmacro %}
+
+{# ══════════════════════════════════════════════════════════════════
+Macro: Daily Operation grid – 60 read-only columns (A-BH)
+Same as Production Data through NPL KG, then FG+Blend + Status.
+Column AA = TP (instead of TISS).
+══════════════════════════════════════════════════════════════════ #}
+{% macro daily_grid(grid_id, rows) %}
+<thead>
+    <tr>
+        {% set cols = ['RID','QR Date (D-)','Prod. Date (D)','NPL Date (D+1)','Process Order',
+        'SKU','SKU Desc','SKU GTN','Blend Code','Blend Desc','Blend GTIN','Cig. Code','UID',
+        'NBLD','PCU','VF','FPD','MIP',
+        'α','β','γ','δ',
+        'NC','NT','NTM','TW',
+        'TP','TUN','RW1','RW2','RW3','RW4','RW5','WM','WP','WQ','NW','NMC','NCG','T USD','M DSP','M DST',
+        'S1','S2','TD','F','NS1','NS2','NTD','NF','NTDRY',
+        'W DRY','W TOB','W CIG',
+        'TAC','TTC','NPL%','NPL KG',
+        'FG+Blend','Status'] %}
+        {% for col in cols %}
+        <th onclick="sortGrid('{{ grid_id }}',{{ loop.index0 }})">{{ col }}</th>
+        {% endfor %}
+    </tr>
+    <tr>
+        {% for i in range(cols|length) %}
+        <th><input class="col-filter" placeholder="{% if i == 0 %}#{% else %}Filter{% endif %}"
+                oninput="colFilter('{{ grid_id }}',{{ i }},this.value)"></th>
+        {% endfor %}
+    </tr>
+</thead>
+<tbody>
+    {% for r in rows %}
+    <tr style="cursor:pointer" onclick="window.location='{{ url_for('process_orders.detail', id=r.po.id) }}'">
+        {# ── Reference (13 cols) ── #}
+        <td>{{ loop.index }}</td>
+        <td>{{ r.qr_date.strftime('%d %b %Y') if r.qr_date else '–' }}</td>
+        <td>{{ r.po.process_date.strftime('%d %b %Y') if r.po.process_date else '–' }}</td>
+        <td>{{ r.npl_date.strftime('%d %b %Y') if r.npl_date else '–' }}</td>
+        <td class="uid-cell">{{ r.po.process_order_number }}</td>
+        <td>{{ r.fg.fg_code if r.fg else '–' }}</td>
+        <td>{{ r.fg.brand if r.fg else '–' }}</td>
+        <td>{{ r.fg.fg_gtin if r.fg and r.fg.fg_gtin else '–' }}</td>
+        <td>{{ r.fg.blend_code if r.fg and r.fg.blend_code else '–' }}</td>
+        <td>{{ r.fg.blend if r.fg else '–' }}</td>
+        <td>{{ r.fg.blend_gtin if r.fg and r.fg.blend_gtin else '–' }}</td>
+        <td>{{ r.fg.cig_code if r.fg and r.fg.cig_code else '–' }}</td>
+        <td class="uid-cell">{{ r.uid }}</td>
+        {# ── Key Variables (5) – TW inputs ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.input_n_bld) if r.tw and r.tw.input_n_bld is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_p_cu) if r.tw and r.tw.input_p_cu is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_t_vnt) if r.tw and r.tw.input_t_vnt is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_f_pd) if r.tw and r.tw.input_f_pd is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.input_m_ip) if r.tw and r.tw.input_m_ip is not none else '–' }}</td>
+        {# ── Constants (4) – TW inputs ── #}
+        <td class="num">{{ '%.6f'|format(r.tw.input_alpha) if r.tw and r.tw.input_alpha is not none else '–' }}</td>
+        <td class="num">{{ '%.6f'|format(r.tw.input_beta) if r.tw and r.tw.input_beta is not none else '–' }}</td>
+        <td class="num">{{ '%.6f'|format(r.tw.input_gamma) if r.tw and r.tw.input_gamma is not none else '–' }}</td>
+        <td class="num">{{ '%.6f'|format(r.tw.input_delta) if r.tw and r.tw.input_delta is not none else '–' }}</td>
+        {# ── NC, NT (2) – FG Code ── #}
+        <td class="num">{{ '%.2f'|format(r.fg.c_plg) if r.fg and r.fg.c_plg is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.fg.target_nic) if r.fg and r.fg.target_nic is not none else '–' }}</td>
+        {# ── NTM, TW (2) ── #}
+        <td class="num">{{ '%.4f'|format(r.fg.ntm_wt_mean) if r.fg and r.fg.ntm_wt_mean is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.tw) if r.tw and r.tw.tw is not none else '–' }}</td>
+        {# ── NPL Input (16) – TP instead of TISS ── #}
+        {% set ni = r.npl_input %}
+        <td class="num">{{ '%.2f'|format(ni.t_iss) if ni and ni.t_iss is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.t_un) if ni and ni.t_un is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_dst) if ni and ni.l_dst is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_win) if ni and ni.l_win is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_flr) if ni and ni.l_flr is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_srt) if ni and ni.l_srt is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.l_dt) if ni and ni.l_dt is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.r_mkg) if ni and ni.r_mkg is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.r_pkg) if ni and ni.r_pkg is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.r_ndt) if ni and ni.r_ndt is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.n_w) if ni and ni.n_w is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.n_mc) if ni and ni.n_mc is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.n_cg) if ni and ni.n_cg is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.t_usd) if ni and ni.t_usd is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.m_dsp) if ni and ni.m_dsp is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(ni.m_dst) if ni and ni.m_dst is not none else '–' }}</td>
+        {# ── TW Results (9) ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.stage1_dilution) if r.tw and r.tw.stage1_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage2_dilution) if r.tw and r.tw.stage2_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_dilution) if r.tw and r.tw.total_dilution is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.filtration_pct) if r.tw and r.tw.filtration_pct is not none else '–' }}
+        </td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage1_pacifying_nicotine_demand) if r.tw and
+            r.tw.stage1_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.stage2_pacifying_nicotine_demand) if r.tw and
+            r.tw.stage2_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_pacifying_nicotine_demand) if r.tw and
+            r.tw.total_pacifying_nicotine_demand is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_filtration_pct) if r.tw and r.tw.total_filtration_pct is not none
+            else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.total_nicotine_demand) if r.tw and r.tw.total_nicotine_demand is not none
+            else '–' }}</td>
+        {# ── TW Output (3) ── #}
+        <td class="num">{{ '%.4f'|format(r.tw.w_dry) if r.tw and r.tw.w_dry is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.w_tob) if r.tw and r.tw.w_tob is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.tw.w_cig) if r.tw and r.tw.w_cig is not none else '–' }}</td>
+        {# ── NPL Results (4) ── #}
+        <td class="num">{{ '%.4f'|format(r.npl.tac) if r.npl and r.npl.tac is not none else '–' }}</td>
+        <td class="num">{{ '%.4f'|format(r.npl.ttc) if r.npl and r.npl.ttc is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.npl.npl_pct) if r.npl and r.npl.npl_pct is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(r.npl.npl_kg) if r.npl and r.npl.npl_kg is not none else '–' }}</td>
+        {# ── FG+Blend + Status (2) ── #}
+        <td>{{ (r.fg.fg_code ~ ', ' ~ r.fg.blend_code) if r.fg and r.fg.fg_code and r.fg.blend_code else '–' }}</td>
+        <td>{{ r.po.status }}</td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="60" style="text-align:center;padding:40px;color:var(--cgr-text-muted)">No daily operation data</td>
+    </tr>
+    {% endfor %}
+</tbody>
+{% endmacro %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('qa.index') }}">QA Workflow</a>
+<span class="separator">/</span>
+<span class="current">Data Grid</span>
+{% endblock %}
+
+{% block content %}
+<style>
+    .grid-tabs .nav-link {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--cgr-text-muted);
+        border: 1px solid transparent;
+        border-bottom: 2px solid transparent;
+        padding: 8px 20px;
+        border-radius: 0;
+    }
+
+    .grid-tabs .nav-link.active {
+        color: var(--cgr-primary);
+        border-bottom: 2px solid var(--cgr-primary);
+        background: var(--cgr-white);
+    }
+
+    .excel-grid-wrap {
+        overflow: auto;
+        max-height: calc(100vh - 260px);
+        border: 1px solid var(--cgr-border);
+        border-radius: var(--radius-lg);
+        background: var(--cgr-white);
+    }
+
+    .excel-grid {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.78rem;
+        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    .excel-grid thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f1f5f9;
+        color: var(--cgr-text);
+        font-weight: 700;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 6px 10px;
+        border-bottom: 2px solid var(--cgr-border);
+        border-right: 1px solid #e2e8f0;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .excel-grid thead th:hover {
+        background: #e2e8f0;
+    }
+
+    .excel-grid thead th.sorted-asc::after {
+        content: ' \u25B2';
+        font-size: 0.6rem;
+    }
+
+    .excel-grid thead th.sorted-desc::after {
+        content: ' \u25BC';
+        font-size: 0.6rem;
+    }
+
+    .excel-grid tbody td {
+        padding: 5px 10px;
+        border-bottom: 1px solid #f1f5f9;
+        border-right: 1px solid #f1f5f9;
+        white-space: nowrap;
+        color: var(--cgr-text);
+    }
+
+    .excel-grid tbody tr:nth-child(even) td {
+        background: #f8fafc;
+    }
+
+    .excel-grid tbody tr:hover td {
+        background: #f0fdf4;
+    }
+
+    .excel-grid tbody tr.selected td {
+        background: #dcfce7;
+    }
+
+    /* ── Sticky first 6 columns (RID → SKU) ─────────────── */
+    .excel-grid thead th:nth-child(-n+6),
+    .excel-grid tbody td:nth-child(-n+6) {
+        position: sticky;
+        z-index: 1;
+    }
+
+    .excel-grid thead th:nth-child(-n+6) {
+        z-index: 3;
+    }
+
+    /* left offsets (cumulative widths) */
+    .excel-grid thead th:nth-child(1),
+    .excel-grid tbody td:nth-child(1) {
+        left: 0;
+        min-width: 32px;
+        max-width: 42px;
+        padding: 5px 4px;
+        text-align: center;
+    }
+
+    .excel-grid thead tr:nth-child(2) th:nth-child(1) .col-filter {
+        width: 22px;
+        min-width: 0;
+        padding: 2px;
+        text-align: center;
+    }
+
+    .excel-grid thead th:nth-child(2),
+    .excel-grid tbody td:nth-child(2) {
+        left: 42px;
+        min-width: 100px;
+    }
+
+    .excel-grid thead th:nth-child(3),
+    .excel-grid tbody td:nth-child(3) {
+        left: 142px;
+        min-width: 110px;
+    }
+
+    .excel-grid thead th:nth-child(4),
+    .excel-grid tbody td:nth-child(4) {
+        left: 252px;
+        min-width: 100px;
+    }
+
+    .excel-grid thead th:nth-child(5),
+    .excel-grid tbody td:nth-child(5) {
+        left: 352px;
+        min-width: 150px;
+    }
+
+    .excel-grid thead th:nth-child(6),
+    .excel-grid tbody td:nth-child(6) {
+        left: 502px;
+        min-width: 100px;
+        border-right: 2px solid #cbd5e1;
+    }
+
+    /* header backgrounds */
+    .excel-grid thead th:nth-child(-n+6) {
+        background: #f1f5f9;
+    }
+
+    /* body backgrounds for zebra + hover */
+    .excel-grid tbody tr:nth-child(even) td:nth-child(-n+6) {
+        background: #f8fafc;
+    }
+
+    .excel-grid tbody tr:nth-child(odd) td:nth-child(-n+6) {
+        background: #fff;
+    }
+
+    .excel-grid tbody tr:hover td:nth-child(-n+6) {
+        background: #f0fdf4;
+    }
+
+    .excel-grid .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .excel-grid .uid-cell {
+        font-weight: 600;
+        color: var(--cgr-primary);
+    }
+
+    .grid-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--cgr-border);
+    }
+
+    .grid-search {
+        border: 1px solid var(--cgr-border);
+        border-radius: var(--radius-sm);
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        width: 250px;
+    }
+
+    .grid-search:focus {
+        border-color: var(--cgr-primary);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(13, 107, 60, .12);
+    }
+
+    .grid-count {
+        font-size: 0.78rem;
+        color: var(--cgr-text-muted);
+        margin-left: auto;
+    }
+
+    .col-filter {
+        display: block;
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-size: 0.7rem;
+        margin-top: 4px;
+        font-family: inherit;
+    }
+
+    .col-filter:focus {
+        border-color: var(--cgr-primary);
+        outline: none;
+    }
+
+    .col-filter.active {
+        border-color: var(--cgr-primary);
+        background: #f0fdf4;
+    }
+
+    .highlight {
+        background: #fef08a !important;
+    }
+
+    .btn-export {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: 1px solid var(--cgr-primary);
+        border-radius: var(--radius-sm);
+        background: var(--cgr-white);
+        color: var(--cgr-primary);
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+    .btn-export:hover {
+        background: var(--cgr-primary);
+        color: #fff;
+    }
+
+    .grid-stats {
+        font-size: 0.75rem;
+        color: var(--cgr-text-muted);
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* ── Paste modal ── */
+    .paste-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .35);
+        z-index: 1050;
+        display: none;
+    }
+
+    .paste-backdrop.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .paste-modal {
+        background: #fff;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
+        width: 90vw;
+        max-width: 900px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .paste-modal-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--cgr-border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .paste-modal-header h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .paste-modal-header .close-btn {
+        margin-left: auto;
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: var(--cgr-text-muted);
+    }
+
+    .paste-modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .paste-area {
+        width: 100%;
+        min-height: 160px;
+        border: 2px dashed var(--cgr-border);
+        border-radius: var(--radius-sm);
+        padding: 12px;
+        font-size: 0.82rem;
+        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        resize: vertical;
+        transition: border-color .15s;
+    }
+
+    .paste-area:focus {
+        border-color: var(--cgr-primary);
+        outline: none;
+    }
+
+    .paste-preview {
+        margin-top: 16px;
+        overflow: auto;
+        max-height: 300px;
+    }
+
+    .paste-preview table {
+        font-size: 0.75rem;
+        width: max-content;
+    }
+
+    .paste-preview th {
+        background: #f1f5f9;
+        font-weight: 700;
+        white-space: nowrap;
+        padding: 4px 8px;
+    }
+
+    .paste-preview td {
+        white-space: nowrap;
+        padding: 4px 8px;
+    }
+
+    .paste-preview tr.match td {
+        background: #f0fdf4;
+    }
+
+    .paste-preview tr.no-match td {
+        background: #fef2f2;
+    }
+
+    .paste-modal-footer {
+        padding: 12px 20px;
+        border-top: 1px solid var(--cgr-border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .paste-stats {
+        font-size: 0.8rem;
+        color: var(--cgr-text-muted);
+    }
+
+    .paste-modal-footer .btn {
+        font-size: 0.85rem;
+    }
+
+    /* ── Inline editable cells ── */
+    .excel-grid td.ed {
+        padding: 1px 2px;
+    }
+
+    .excel-grid .cell-input {
+        width: 100%;
+        min-width: 60px;
+        border: 1px solid transparent;
+        border-radius: 2px;
+        padding: 3px 5px;
+        font-size: 0.78rem;
+        font-family: inherit;
+        background: transparent;
+        text-align: right;
+        transition: border-color .15s, background .15s;
+    }
+
+    .excel-grid .cell-input:focus {
+        border-color: var(--cgr-primary);
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0 0 1px rgba(13, 107, 60, .15);
+    }
+
+    .excel-grid .cell-input:hover {
+        border-color: #cbd5e1;
+        background: #fff;
+    }
+
+    .excel-grid .cell-input.dirty {
+        background: #fffbeb;
+        border-color: #f59e0b;
+    }
+
+    .excel-grid .cell-input[data-field="tow"],
+    .excel-grid .cell-input[data-field="mc"],
+    .excel-grid .cell-input[data-field="company"] {
+        text-align: left;
+    }
+
+    .excel-grid .cell-input[type="date"] {
+        min-width: 130px;
+        text-align: left;
+    }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-grid-3x3-gap"></i> Data Grid</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+        {% if not show_all %}
+        <a href="{{ url_for('qa.data_grid', all='1') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrows-angle-expand"></i> Show All
+        </a>
+        {% else %}
+        <a href="{{ url_for('qa.data_grid') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrows-angle-contract"></i> Last 10
+        </a>
+        {% endif %}
+        <a href="{{ url_for('qa.index') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</div>
+
+{# ── Tabs ──────────────────────────────────────────────── #}
+<ul class="nav grid-tabs mb-0" role="tablist">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-production">Production Data</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-qa">QA Analysis</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-daily">Daily Operation</a></li>
+</ul>
+
+<div class="tab-content">
+    {# ══════════════════════ PRODUCTION DATA TAB ══════════════════════ #}
+    <div class="tab-pane fade show active" id="tab-production">
+        <div class="grid-toolbar">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" class="grid-search" placeholder="Search production data..."
+                oninput="filterGrid('prod-grid', this.value)">
+            <div class="grid-stats">
+                <button class="btn-export" onclick="openPasteModal()"
+                    style="border-color:var(--cgr-secondary);color:var(--cgr-secondary)">
+                    <i class="bi bi-clipboard-data"></i> Paste from Excel
+                </button>
+                <span id="prod-count">{{ rows|length }} rows{% if not show_all %} (latest){% endif %}</span>
+                <button class="btn-export" onclick="exportCSV('prod-grid', 'production_data')">
+                    <i class="bi bi-download"></i> CSV
+                </button>
+                <a href="{{ url_for('qa.export_excel') }}" class="btn-export" style="text-decoration:none">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+            </div>
+        </div>
+        <div class="excel-grid-wrap">
+            <table class="excel-grid" id="prod-grid">
+                {{ production_grid('prod-grid', rows) }}
+            </table>
+        </div>
+    </div>
+
+    {# ══════════════════════ QA ANALYSIS TAB ══════════════════════ #}
+    <div class="tab-pane fade" id="tab-qa">
+        <div class="grid-toolbar">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" class="grid-search" placeholder="Search QA data..."
+                oninput="filterGrid('qa-grid', this.value)">
+            <div class="grid-stats">
+                <button class="btn-export" onclick="pasteFromClipboard()"
+                    style="border-color:var(--cgr-secondary);color:var(--cgr-secondary)">
+                    <i class="bi bi-clipboard-data"></i> Paste from Excel
+                </button>
+                <button class="btn-export" onclick="saveAllQA()" id="btn-save-qa"
+                    style="border-color:var(--cgr-primary);color:var(--cgr-primary);display:none">
+                    <i class="bi bi-check2-all"></i> Save All
+                </button>
+                <span id="qa-count">{{ rows|length }} rows</span>
+                <button class="btn-export" onclick="exportCSV('qa-grid', 'qa_analysis')">
+                    <i class="bi bi-download"></i> CSV
+                </button>
+            </div>
+        </div>
+        <div class="excel-grid-wrap">
+            <table class="excel-grid" id="qa-grid">
+                {{ qa_grid('qa-grid', rows) }}
+            </table>
+        </div>
+    </div>
+
+    {# ══════════════════════ DAILY OPERATION TAB ══════════════════════ #}
+    <div class="tab-pane fade" id="tab-daily">
+        <div class="grid-toolbar">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" class="grid-search" placeholder="Search daily operations..."
+                oninput="filterGrid('daily-grid', this.value)">
+            <div class="grid-stats">
+                <span id="daily-count">{{ rows|length }} rows</span>
+                <button class="btn-export" onclick="exportCSV('daily-grid', 'daily_operation')">
+                    <i class="bi bi-download"></i> CSV
+                </button>
+            </div>
+        </div>
+        <div class="excel-grid-wrap">
+            <table class="excel-grid" id="daily-grid">
+                {{ daily_grid('daily-grid', rows) }}
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ── Grid Search ──────────────────────────────────────── */
+    function filterGrid(tableId, query) {
+        const table = document.getElementById(tableId);
+        const rows = table.querySelectorAll('tbody tr');
+        const q = query.toLowerCase();
+        let visible = 0;
+        rows.forEach(tr => {
+            const text = tr.textContent.toLowerCase();
+            const show = !q || text.includes(q);
+            tr.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const countEl = document.getElementById(tableId.replace('-grid', '-count'));
+        if (countEl) countEl.textContent = visible + ' rows';
+    }
+
+    /* ── Column Filter ────────────────────────────────────── */
+    const colFilters = {};
+    function colFilter(tableId, colIdx, value) {
+        if (!colFilters[tableId]) colFilters[tableId] = {};
+        colFilters[tableId][colIdx] = value.toLowerCase();
+        // Highlight active filters
+        const input = event.target;
+        if (value) { input.classList.add('active'); }
+        else { input.classList.remove('active'); }
+        applyColFilters(tableId);
+    }
+    function applyColFilters(tableId) {
+        const table = document.getElementById(tableId);
+        const rows = table.querySelectorAll('tbody tr');
+        const filters = colFilters[tableId] || {};
+        let visible = 0;
+        rows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            let show = true;
+            for (const [col, val] of Object.entries(filters)) {
+                if (val && cells[col]) {
+                    if (!cells[col].textContent.toLowerCase().includes(val)) {
+                        show = false;
+                        break;
+                    }
+                }
+            }
+            tr.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const countEl = document.getElementById(tableId.replace('-grid', '-count'));
+        if (countEl) countEl.textContent = visible + ' rows';
+    }
+
+    /* ── Column Sort ──────────────────────────────────────── */
+    const sortState = {};
+    function sortGrid(tableId, colIdx) {
+        const table = document.getElementById(tableId);
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const key = tableId + '-' + colIdx;
+        const asc = sortState[key] !== 'asc';
+        sortState[key] = asc ? 'asc' : 'desc';
+
+        // Clear sort indicators
+        table.querySelectorAll('thead tr:first-child th').forEach(th => {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+        });
+        const th = table.querySelectorAll('thead tr:first-child th')[colIdx];
+        th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+
+        rows.sort((a, b) => {
+            const aVal = a.querySelectorAll('td')[colIdx]?.textContent.trim() || '';
+            const bVal = b.querySelectorAll('td')[colIdx]?.textContent.trim() || '';
+            const aNum = parseFloat(aVal);
+            const bNum = parseFloat(bVal);
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return asc ? aNum - bNum : bNum - aNum;
+            }
+            return asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    /* ── Export to CSV ────────────────────────────────────── */
+    function exportCSV(tableId, filename) {
+        const table = document.getElementById(tableId);
+        const headers = Array.from(table.querySelectorAll('thead tr:first-child th'))
+            .map(th => '"' + th.textContent.trim().replace(/"/g, '""') + '"');
+        const rows = Array.from(table.querySelectorAll('tbody tr'))
+            .filter(tr => tr.style.display !== 'none')
+            .map(tr =>
+                Array.from(tr.querySelectorAll('td'))
+                    .map(td => '"' + td.textContent.trim().replace(/"/g, '""') + '"')
+                    .join(',')
+            );
+        const csv = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Inline QA Grid: paste from clipboard + save all
+       ════════════════════════════════════════════════════════ */
+
+    // Editable field order (columns 13-36 in the grid = Pack OV → Company)
+    const EDIT_FIELDS = [
+        'pack_ov', 'lamina_cpi', 'filling_power', 'filling_power_corr', 'maker_moisture', 'ssi',
+        'pan_pct', 'total_cig_length', 'circumference_mean', 'circumference_sd', 'cig_dia',
+        'tip_vf', 'tip_vf_sd', 'filter_pd_mean', 'w_ntm', 'plug_wrap_cu', 'tow',
+        'cig_pdo', 'cig_hardness', 'cig_corr_hardness', 'loose_shorts', 'plug_length',
+        'mc', 'company'
+    ];
+
+    // Track dirty state
+    document.addEventListener('input', function (e) {
+        if (e.target.classList.contains('cell-input')) {
+            e.target.classList.add('dirty');
+            document.getElementById('btn-save-qa').style.display = '';
+        }
+    });
+
+    /**
+     * Intercept Ctrl+V on individual cells: split tab-separated values
+     * and distribute across subsequent input fields in the same row(s).
+     */
+    document.addEventListener('paste', function (e) {
+        const target = e.target;
+        if (!target.classList || !target.classList.contains('cell-input')) return;
+
+        const clipData = (e.clipboardData || window.clipboardData).getData('text');
+        if (!clipData || !clipData.includes('\t')) return; // single value → let browser handle it
+
+        e.preventDefault(); // stop browser from dumping everything into one cell
+
+        const lines = clipData.replace(/\r\n$/, '').split(/\r?\n/);
+        const startTr = target.closest('tr');
+        if (!startTr) return;
+
+        const tbody = startTr.closest('tbody');
+        const allRows = Array.from(tbody.querySelectorAll('tr[data-po-number]'));
+        const startRowIdx = allRows.indexOf(startTr);
+
+        // Find starting input index within the row
+        const rowInputs = Array.from(startTr.querySelectorAll('.cell-input'));
+        const startColIdx = rowInputs.indexOf(target);
+
+        for (let r = 0; r < lines.length; r++) {
+            const rowIdx = startRowIdx + r;
+            if (rowIdx >= allRows.length) break;
+
+            const tr = allRows[rowIdx];
+            const inputs = Array.from(tr.querySelectorAll('.cell-input'));
+            const vals = lines[r].split('\t');
+
+            for (let c = 0; c < vals.length; c++) {
+                const inputIdx = startColIdx + c;
+                if (inputIdx >= inputs.length) break;
+
+                const val = vals[c].trim();
+                if (val && val !== '–' && val !== '-') {
+                    inputs[inputIdx].value = val;
+                    inputs[inputIdx].classList.add('dirty');
+                }
+            }
+        }
+        document.getElementById('btn-save-qa').style.display = '';
+    });
+
+    /**
+     * Paste from clipboard directly into QA grid cells.
+     * User copies rows from Excel with Pack OV → Company columns (24 cols).
+     * Each pasted row maps to a grid row by position (starting from row 1).
+     */
+    async function pasteFromClipboard() {
+        // Switch to QA tab if not active
+        const qaTab = document.querySelector('a[href="#tab-qa"]');
+        if (qaTab && !qaTab.classList.contains('active')) {
+            qaTab.click();
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        let text = '';
+        try {
+            text = await navigator.clipboard.readText();
+        } catch (err) {
+            alert('⚠️ Cannot read clipboard. Please allow clipboard access or use Ctrl+V in a cell.');
+            return;
+        }
+
+        if (!text || !text.trim()) {
+            alert('⚠️ Clipboard is empty. Copy the data from Excel first.');
+            return;
+        }
+
+        const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+        if (lines.length === 0) return;
+
+        let dataLines = lines.map(l => l.split('\t'));
+
+        // Auto-skip header row
+        const first = (dataLines[0][0] || '').trim().toLowerCase();
+        if (['pack', 'pack ov', 'lamina', 'rid', '#', 'no', 'sl'].includes(first) ||
+            first.startsWith('pack')) {
+            dataLines.shift();
+        }
+
+        if (dataLines.length === 0) {
+            alert('⚠️ No data rows found after removing header.');
+            return;
+        }
+
+        const table = document.getElementById('qa-grid');
+        const tbody = table.querySelector('tbody');
+        const gridRows = Array.from(tbody.querySelectorAll('tr[data-po-number]'));
+
+        if (gridRows.length === 0) {
+            alert('⚠️ No rows in QA grid to fill.');
+            return;
+        }
+
+        let filled = 0;
+        for (let i = 0; i < dataLines.length && i < gridRows.length; i++) {
+            const cols = dataLines[i];
+            const tr = gridRows[i];
+            const allInputs = tr.querySelectorAll('.cell-input');
+            // Separate date inputs (qr_date, npl_date) from measurement inputs
+            const dateInputs = Array.from(allInputs).filter(inp => inp.type === 'date');
+            const measInputs = Array.from(allInputs).filter(inp => inp.type !== 'date');
+
+            // If pasted data has 2+ extra columns beyond measurements, assume dates are included
+            const hasDateCols = cols.length >= measInputs.length + 2;
+            const targets = hasDateCols ? Array.from(allInputs) : measInputs;
+
+            for (let c = 0; c < cols.length && c < targets.length; c++) {
+                const val = cols[c].trim();
+                if (val && val !== '–' && val !== '-') {
+                    targets[c].value = val;
+                    targets[c].classList.add('dirty');
+                }
+            }
+            filled++;
+        }
+
+        document.getElementById('btn-save-qa').style.display = '';
+        alert('✅ Pasted data into ' + filled + ' rows. Review the highlighted cells, then click "Save All".');
+    }
+
+    /**
+     * Collect all dirty cells from the QA grid, build bulk-paste payload, and POST.
+     */
+    function saveAllQA() {
+        const table = document.getElementById('qa-grid');
+        const tbody = table.querySelector('tbody');
+        const gridRows = Array.from(tbody.querySelectorAll('tr[data-po-number]'));
+
+        // Build rows array matching the _PASTE_COL_MAP format (38-col grid order)
+        const payload = [];
+        let dirtyCount = 0;
+
+        gridRows.forEach(tr => {
+            const poNumber = tr.dataset.poNumber;
+            const inputs = tr.querySelectorAll('.cell-input');
+            const hasDirty = Array.from(inputs).some(inp => inp.classList.contains('dirty'));
+            if (!hasDirty) return;
+
+            dirtyCount++;
+            // Build a 38-element array matching the grid column order
+            // cols 0-12 are read-only reference cols, col 4 = PO number (key)
+            const row = new Array(38).fill('');
+            row[4] = poNumber; // Process Order number is the match key
+
+            // Use data-col attribute to map each input to the correct column index
+            inputs.forEach(inp => {
+                const col = parseInt(inp.dataset.col, 10);
+                if (!isNaN(col)) row[col] = inp.value.trim();
+            });
+            payload.push(row);
+        });
+
+        if (dirtyCount === 0) {
+            alert('No changes to save.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-save-qa');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving…';
+
+        fetch('{{ url_for("qa.bulk_paste") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ rows: payload })
+        })
+            .then(r => {
+                if (!r.ok) {
+                    return r.text().then(txt => { throw new Error('Server ' + r.status + ': ' + txt.substring(0, 200)); });
+                }
+                return r.json();
+            })
+            .then(data => {
+                if (data.ok) {
+                    let msg = '✅ Saved: ' + data.created + ' created, ' + data.updated + ' updated';
+                    if (data.skipped && data.skipped.length) {
+                        msg += '\n⚠️ Skipped: ' + data.skipped.join(', ');
+                    }
+                    if (data.errors && data.errors.length) {
+                        msg += '\n❌ Errors: ' + data.errors.join(', ');
+                    }
+                    alert(msg);
+                    location.reload();
+                } else {
+                    alert('❌ ' + (data.error || 'Save failed'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check2-all"></i> Save All';
+                }
+            })
+            .catch(err => {
+                alert('❌ Error: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check2-all"></i> Save All';
+            });
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Paste-from-Excel modal (Production Data tab)
+       ════════════════════════════════════════════════════════ */
+    const COL_HEADERS = ['RID', 'QR Date', 'Prod. Date', 'NPL Date', 'Process Order',
+        'SKU', 'SKU Desc', 'SKU GTN', 'Blend Code', 'Blend Desc', 'Blend GTIN', 'Cig. Code', 'UID',
+        'Pack OV', 'Lamina CPI', 'Filling Power', 'FP Corr', 'Maker Moist', 'SSI',
+        'PAN%', 'Cig Length', 'Circ Mean', 'Circ SD', 'Cig Dia',
+        'TIP VF', 'TIP Vf SD', 'Filter PD', 'W_NTM', 'Plug Wrap CU', 'TOW',
+        'Cig PDO', 'Cig Hard', 'Cig Corr Hard', 'Loose Shorts', 'Plug Length',
+        'MC', 'Company', 'Status'];
+
+    let parsedRows = [];
+
+    function openPasteModal() {
+        document.getElementById('paste-backdrop').classList.add('show');
+        document.getElementById('paste-area').value = '';
+        document.getElementById('paste-preview').innerHTML = '';
+        document.getElementById('paste-stats').textContent = '';
+        document.getElementById('btn-import').disabled = true;
+        parsedRows = [];
+        document.getElementById('paste-area').focus();
+    }
+
+    function closePasteModal() {
+        document.getElementById('paste-backdrop').classList.remove('show');
+    }
+
+    function parsePasteInput() {
+        const raw = document.getElementById('paste-area').value.trim();
+        if (!raw) { parsedRows = []; updatePreview(); return; }
+
+        const lines = raw.split(/\r?\n/).filter(l => l.trim());
+        parsedRows = lines.map(line => line.split('\t'));
+
+        // Auto-detect if first row is header (starts with "RID" or non-numeric first cell)
+        if (parsedRows.length > 0) {
+            const first = parsedRows[0][0]?.trim().toLowerCase();
+            if (first === 'rid' || first === '#' || first === 'no' || first === 'sl') {
+                parsedRows.shift(); // remove header row
+            }
+        }
+
+        console.log('[Paste] Parsed', parsedRows.length, 'rows, cols per row:', parsedRows[0]?.length, 'sample:', parsedRows[0]);
+
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const container = document.getElementById('paste-preview');
+        const stats = document.getElementById('paste-stats');
+        const btn = document.getElementById('btn-import');
+
+        if (parsedRows.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="font-size:0.85rem">Paste tab-separated data from Excel above. Columns must match the grid layout.</p>';
+            stats.textContent = '';
+            btn.disabled = true;
+            return;
+        }
+
+        // Build preview table (show first 20 rows max, limited columns)
+        const showCols = [4, 1, 3, 13, 20, 31, 35, 36]; // PO, QR Date, NPL Date, Pack OV, Cig Length, Hardness, MC, Company
+        const showHeaders = showCols.map(i => COL_HEADERS[i] || `Col ${i}`);
+        let html = '<table class="table table-sm table-bordered mb-0"><thead><tr>';
+        html += '<th>#</th>';
+        showHeaders.forEach(h => { html += '<th>' + h + '</th>'; });
+        html += '</tr></thead><tbody>';
+
+        const maxPreview = Math.min(parsedRows.length, 20);
+        let poCount = 0;
+        for (let r = 0; r < maxPreview; r++) {
+            const cols = parsedRows[r];
+            const po = (cols[4] || '').trim();
+            const hasPO = po && po !== '–' && po !== '-';
+            if (hasPO) poCount++;
+            html += '<tr class="' + (hasPO ? 'match' : 'no-match') + '">';
+            html += '<td>' + (r + 1) + '</td>';
+            showCols.forEach(i => {
+                html += '<td>' + (cols[i] !== undefined ? cols[i].trim() : '') + '</td>';
+            });
+            html += '</tr>';
+        }
+        if (parsedRows.length > 20) {
+            html += '<tr><td colspan="' + (showHeaders.length + 1) + '" style="text-align:center;color:var(--cgr-text-muted)">… and ' + (parsedRows.length - 20) + ' more rows</td></tr>';
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        const colInfo = parsedRows[0] ? ' (' + parsedRows[0].length + ' cols)' : '';
+        stats.textContent = parsedRows.length + ' rows parsed' + colInfo + ', ' + poCount + ' with Process Order';
+        if (poCount === 0 && parsedRows.length > 0) {
+            stats.textContent += ' — ⚠️ Process Order must be in column 5 (grid order)';
+        }
+        btn.disabled = poCount === 0;
+    }
+
+    function submitPaste() {
+        if (parsedRows.length === 0) return;
+
+        const btn = document.getElementById('btn-import');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing…';
+
+        console.log('[Paste] Submitting', parsedRows.length, 'rows, sample:', parsedRows[0]);
+
+        fetch('{{ url_for("qa.bulk_paste") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ rows: parsedRows })
+        })
+            .then(r => {
+                if (!r.ok) {
+                    return r.text().then(txt => {
+                        throw new Error('Server ' + r.status + ': ' + txt.substring(0, 200));
+                    });
+                }
+                return r.json();
+            })
+            .then(data => {
+                if (data.ok) {
+                    let msg = '✅ Import complete: ' + data.created + ' created, ' + data.updated + ' updated';
+                    if (data.skipped && data.skipped.length) {
+                        msg += '\n⚠️ Skipped: ' + data.skipped.join(', ');
+                    }
+                    if (data.errors && data.errors.length) {
+                        msg += '\n❌ Errors: ' + data.errors.join(', ');
+                    }
+                    alert(msg);
+                    closePasteModal();
+                    location.reload();
+                } else {
+                    alert('❌ ' + (data.error || 'Import failed'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-lg"></i> Import';
+                }
+            })
+            .catch(err => {
+                alert('❌ Network error: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg"></i> Import';
+            });
+    }
+</script>
+
+{# ── Paste Modal ──────────────────────────────────────────── #}
+<div id="paste-backdrop" class="paste-backdrop" onclick="if(event.target===this)closePasteModal()">
+    <div class="paste-modal">
+        <div class="paste-modal-header">
+            <i class="bi bi-clipboard-data" style="font-size:1.2rem;color:var(--cgr-primary)"></i>
+            <h5>Paste QA Data from Excel</h5>
+            <button class="close-btn" onclick="closePasteModal()">&times;</button>
+        </div>
+        <div class="paste-modal-body">
+            <p style="font-size:0.85rem;color:var(--cgr-text-muted);margin-bottom:12px">
+                Copy rows from your Excel sheet and paste below. Columns must follow the grid order
+                (RID, QR Date, Prod. Date, NPL Date, <strong>Process Order</strong>, …).
+                The system matches rows by <strong>Process Order</strong> number.
+            </p>
+            <textarea id="paste-area" class="paste-area"
+                placeholder="Paste tab-separated rows from Excel here (Ctrl+V)…" oninput="parsePasteInput()"
+                onpaste="setTimeout(parsePasteInput,50)"></textarea>
+            <div id="paste-preview" class="paste-preview">
+                <p class="text-muted" style="font-size:0.85rem">Paste tab-separated data from Excel above. Columns must
+                    match the grid layout.</p>
+            </div>
+        </div>
+        <div class="paste-modal-footer">
+            <span id="paste-stats" class="paste-stats"></span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+                <button class="btn btn-sm btn-outline-secondary" onclick="closePasteModal()">Cancel</button>
+                <button id="btn-import" class="btn btn-sm btn-primary" onclick="submitPaste()" disabled>
+                    <i class="bi bi-check-lg"></i> Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

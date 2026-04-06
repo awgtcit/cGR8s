@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import status_badge, delete_button %}
+{% block title %}Process Order: {{ po.process_order_number }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('process_orders.index') }}">Process Orders</a>
+<span class="separator">/</span>
+<span class="current">{{ po.process_order_number }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Workflow Stepper ──────────────────────────────── */
+    .wf-stepper {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        background: var(--cgr-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--cgr-border);
+        overflow: hidden;
+    }
+
+    .wf-stepper-step {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 16px 16px;
+        position: relative;
+        text-decoration: none;
+        color: var(--cgr-text);
+        transition: all 0.2s;
+        cursor: pointer;
+        border-right: 1px solid var(--cgr-border);
+    }
+
+    .wf-stepper-step:last-child {
+        border-right: none;
+    }
+
+    .wf-stepper-step:hover {
+        background: var(--cgr-bg);
+        color: var(--cgr-primary);
+    }
+
+    .wf-stepper-step.completed {
+        background: var(--cgr-success-soft);
+    }
+
+    .wf-stepper-step.active {
+        background: var(--cgr-primary-soft);
+        border-bottom: 3px solid var(--cgr-primary);
+    }
+
+    .wf-step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+    }
+
+    .wf-stepper-step.completed .wf-step-icon {
+        background: var(--cgr-success);
+        color: #fff;
+    }
+
+    .wf-stepper-step.pending .wf-step-icon {
+        background: #F1F5F9;
+        color: #94A3B8;
+    }
+
+    .wf-stepper-step.active .wf-step-icon {
+        background: var(--cgr-primary);
+        color: #fff;
+    }
+
+    .wf-step-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .wf-step-sub {
+        font-size: 0.68rem;
+        color: var(--cgr-text-muted);
+        margin-top: 2px;
+    }
+
+    .wf-stepper-step.completed .wf-step-sub {
+        color: var(--cgr-success);
+        font-weight: 600;
+    }
+
+    /* ── Result Cards ──────────────────────────────────── */
+    .result-card {
+        border: 1px solid var(--cgr-border);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        background: var(--cgr-surface);
+        transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .result-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .result-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--cgr-border);
+    }
+
+    .result-card-title {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--cgr-text);
+    }
+
+    .result-card-badge {
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 20px;
+        letter-spacing: 0.02em;
+    }
+
+    .result-metric {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+
+    .result-metric-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--cgr-primary);
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+        letter-spacing: -0.02em;
+    }
+
+    .result-metric-unit {
+        font-size: 0.8rem;
+        color: var(--cgr-text-muted);
+        font-weight: 500;
+    }
+
+    .result-sub-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 16px;
+    }
+
+    .result-sub-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .result-sub-label {
+        font-size: 0.72rem;
+        color: var(--cgr-text-muted);
+    }
+
+    .result-sub-value {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--cgr-text);
+        font-family: 'SF Mono', 'Cascadia Code', monospace;
+    }
+
+    /* ── Info table ────────────────────────────────────── */
+    .info-table th {
+        background: transparent;
+        color: var(--cgr-primary);
+        font-weight: 600;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: none;
+        padding: 10px 16px;
+        width: 40%;
+    }
+
+    .info-table td {
+        font-weight: 500;
+        border: none;
+        padding: 10px 16px;
+    }
+
+    .info-table tr {
+        border-bottom: 1px solid var(--cgr-border);
+    }
+
+    .info-table tr:last-child {
+        border-bottom: none;
+    }
+
+    /* ── Action buttons ────────────────────────────────── */
+    .detail-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 767.98px) {
+        .wf-stepper {
+            flex-direction: column;
+        }
+
+        .wf-stepper-step {
+            flex-direction: row;
+            gap: 12px;
+            padding: 14px 16px;
+            border-right: none;
+            border-bottom: 1px solid var(--cgr-border);
+        }
+
+        .wf-step-icon {
+            margin-bottom: 0;
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+        }
+
+        .result-sub-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .result-metric-value {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-clipboard-data"></i> {{ po.process_order_number }}</h2>
+    <div class="detail-actions">
+        <a href="{{ url_for('process_orders.edit', id=po.id) }}" class="btn btn-outline-primary btn-sm"><i
+                class="bi bi-pencil"></i> Edit</a>
+        <a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}" class="btn btn-success btn-sm"><i
+                class="bi bi-calculator"></i> Calculate</a>
+        {{ delete_button(url_for('process_orders.delete', id=po.id), csrf_token()) }}
+    </div>
+</div>
+
+<!-- ── Workflow Stepper ──────────────────────────────── -->
+<div class="wf-stepper mb-3">
+    <a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}"
+        class="wf-stepper-step {{ 'completed' if tw else 'pending' }}">
+        <div class="wf-step-icon">
+            {% if tw %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-calculator"></i>{% endif %}
+        </div>
+        <span class="wf-step-label">Target Weight</span>
+        <span class="wf-step-sub">{% if tw %}{{ "%.3f"|format(tw.w_cig) }} mg{% else %}Not calculated{% endif %}</span>
+    </a>
+    <a href="{{ url_for('npl.calculate', process_order_id=po.id) }}"
+        class="wf-stepper-step {{ 'completed' if npl else 'pending' }}">
+        <div class="wf-step-icon">
+            {% if npl %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-graph-down"></i>{% endif %}
+        </div>
+        <span class="wf-step-label">NPL</span>
+        <span class="wf-step-sub">{% if npl %}{{ "%.6f"|format(npl.npl_pct) }}%{% else %}Not calculated{% endif
+            %}</span>
+    </a>
+    <a href="{{ url_for('optimizer.run', process_order_id=po.id) }}" class="wf-stepper-step pending">
+        <div class="wf-step-icon"><i class="bi bi-sliders"></i></div>
+        <span class="wf-step-label">Optimizer</span>
+        <span class="wf-step-sub">Ready</span>
+    </a>
+    <a href="{{ url_for('qa.enter', process_order_id=po.id) }}" class="wf-stepper-step pending">
+        <div class="wf-step-icon"><i class="bi bi-shield-check"></i></div>
+        <span class="wf-step-label">QA Entry</span>
+        <span class="wf-step-sub">Ready</span>
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- ── Order Info ──────────────────────────────────── -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-1"></i> Order Details</div>
+            <div class="card-body p-0">
+                <table class="table table-sm info-table mb-0">
+                    <tr>
+                        <th>Order Number</th>
+                        <td class="fw-semibold">{{ po.process_order_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>FG Code</th>
+                        <td>{% if fg %}<a href="{{ url_for('fg_codes.view', id=fg.id) }}" class="fw-semibold">{{
+                                fg.fg_code }}</a>{% else %}{{ po.fg_code_id }}{% endif %}</td>
+                    </tr>
+                    {% if fg %}
+                    <tr>
+                        <th>Brand</th>
+                        <td>{{ fg.brand or '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Blend</th>
+                        <td>{{ fg.blend or '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Format</th>
+                        <td>{{ fg.format or '–' }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Process Date</th>
+                        <td>{{ po.process_date|date if po.process_date else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td>{{ status_badge(po.status) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Last Run Date</th>
+                        <td>{{ po.last_run_date|date if po.last_run_date else '–' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Calculation Results ─────────────────────────── -->
+    <div class="col-lg-7">
+        <div class="row g-3">
+            <!-- Target Weight Result -->
+            <div class="col-md-6">
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <span class="result-card-title"><i class="bi bi-calculator me-1"></i> Target Weight</span>
+                        {% if tw %}
+                        <span class="result-card-badge"
+                            style="background:var(--cgr-success-soft);color:var(--cgr-success)">Calculated</span>
+                        {% else %}
+                        <span class="result-card-badge" style="background:#F1F5F9;color:#94A3B8">Pending</span>
+                        {% endif %}
+                    </div>
+                    {% if tw %}
+                    <div class="result-metric">
+                        <span class="result-metric-value">{{ "%.3f"|format(tw.w_cig) }}</span>
+                        <span class="result-metric-unit">mg</span>
+                    </div>
+                    <div class="result-sub-grid">
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">W DRY</span>
+                            <span class="result-sub-value">{{ "%.3f"|format(tw.w_dry) if tw.w_dry else '–' }}</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">W TOB</span>
+                            <span class="result-sub-value">{{ "%.3f"|format(tw.w_tob) if tw.w_tob else '–' }}</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">Dilution</span>
+                            <span class="result-sub-value">{{ "%.3f"|format(tw.total_dilution) if tw.total_dilution else
+                                '–' }}</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">Filtration</span>
+                            <span class="result-sub-value">{{ "%.3f"|format(tw.filtration_pct) if tw.filtration_pct else
+                                '–' }}%</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">Nic Demand</span>
+                            <span class="result-sub-value">{{ "%.3f"|format(tw.total_nicotine_demand) if
+                                tw.total_nicotine_demand else '–' }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div style="text-align:center;padding:20px 0">
+                        <div style="color:var(--cgr-text-faint);font-size:2rem;margin-bottom:8px"><i
+                                class="bi bi-calculator"></i></div>
+                        <p style="color:var(--cgr-text-muted);font-size:0.8rem;margin:0">No calculation yet</p>
+                        <a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}"
+                            class="btn btn-sm btn-primary mt-2">Calculate Now</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- NPL Result -->
+            <div class="col-md-6">
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <span class="result-card-title"><i class="bi bi-graph-down me-1"></i> NPL</span>
+                        {% if npl %}
+                        <span class="result-card-badge"
+                            style="background:var(--cgr-success-soft);color:var(--cgr-success)">Calculated</span>
+                        {% else %}
+                        <span class="result-card-badge" style="background:#F1F5F9;color:#94A3B8">Pending</span>
+                        {% endif %}
+                    </div>
+                    {% if npl %}
+                    <div class="result-metric">
+                        <span class="result-metric-value">{{ "%.6f"|format(npl.npl_pct) }}</span>
+                        <span class="result-metric-unit">%</span>
+                    </div>
+                    <div class="result-sub-grid">
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">NPL (kg)</span>
+                            <span class="result-sub-value">{{ "%.6f"|format(npl.npl_kg) if npl.npl_kg else '–' }}</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">TAC</span>
+                            <span class="result-sub-value">{{ "%.2f"|format(npl.tac) if npl.tac else '–' }}</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">TTC</span>
+                            <span class="result-sub-value">{{ "%.2f"|format(npl.ttc) if npl.ttc else '–' }}</span>
+                        </div>
+                        <div class="result-sub-item">
+                            <span class="result-sub-label">Total Waste</span>
+                            <span class="result-sub-value">{{ "%.2f"|format(npl.total_waste) if npl.total_waste else '–'
+                                }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div style="text-align:center;padding:20px 0">
+                        <div style="color:var(--cgr-text-faint);font-size:2rem;margin-bottom:8px"><i
+                                class="bi bi-graph-down"></i></div>
+                        <p style="color:var(--cgr-text-muted);font-size:0.8rem;margin:0">No NPL calculation yet</p>
+                        <a href="{{ url_for('npl.calculate', process_order_id=po.id) }}"
+                            class="btn btn-sm btn-outline-primary mt-2">Calculate NPL</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

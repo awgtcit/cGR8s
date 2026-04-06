@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import pagination, empty_state %}
+{% block title %}NPL Calculations{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">NPL Calculation</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-graph-down"></i> NPL Calculations</h2>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Process Order</th>
+                        <th>NPL %</th>
+                        <th>NPL kg</th>
+                        <th>TAC</th>
+                        <th>TTC</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in items %}
+                    <tr style="cursor:pointer"
+                        onclick="window.location='{{ url_for('npl.calculate', process_order_id=r.process_order_id) }}'">
+                        <td>{{ po_lookup.get(r.process_order_id, r.process_order_id) }}</td>
+                        <td>{{ r.npl_pct|number(6) }}%</td>
+                        <td>{{ r.npl_kg|number(6) }}</td>
+                        <td>{{ r.tac|number(2) }}</td>
+                        <td>{{ r.ttc|number(2) }}</td>
+                        <td>{{ r.created_at|date if r.created_at else '–' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">{{ empty_state('No NPL calculations yet') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if pages is defined and pages > 1 %}
+    <div class="card-footer">{{ pagination(page, pages, 'npl.index') }}</div>
+    {% endif %}
+</div>
+{% endblock %}

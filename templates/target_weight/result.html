@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Target Weight Results{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('target_weight.index') }}">Target Weight</a>
+<span class="separator">/</span>
+<span class="current">Results</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-check-circle"></i> Target Weight Results – {{ po.process_order_number }}</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('npl.calculate', process_order_id=po.id) }}" class="btn btn-primary"><i
+                class="bi bi-graph-down"></i> Calculate NPL</a>
+        <a href="{{ url_for('process_orders.detail', id=po.id) }}" class="btn btn-outline-primary">Back to Order</a>
+    </div>
+</div>
+
+{# ── KPI Cards ───────────────────────────────────────────── #}
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card kpi-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">Target Weight (TW)</div>
+                <div class="kpi-value">{{ '%.3f'|format(output.tw) }}</div>
+                <small class="text-muted">mg</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card kpi-card accent-secondary">
+            <div class="card-body text-center">
+                <div class="kpi-label">Cigarette Weight (W_cig)</div>
+                <div class="kpi-value">{{ '%.3f'|format(output.w_cig) }}</div>
+                <small class="text-muted">mg</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card kpi-card accent-warning">
+            <div class="card-body text-center">
+                <div class="kpi-label">Total Dilution</div>
+                <div class="kpi-value">{{ '%.3f'|format(interim.total_dilution) }}</div>
+                <small class="text-muted">%</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Interim Results + Output Weights ────────────────────── #}
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-diagram-3"></i> Interim Results</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>Stage 1 Dilution</th>
+                        <td>{{ '%.3f'|format(interim.stage1_dilution) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Stage 2 Dilution</th>
+                        <td>{{ '%.3f'|format(interim.stage2_dilution) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Total Dilution</th>
+                        <td>{{ '%.3f'|format(interim.total_dilution) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Filtration %</th>
+                        <td>{{ '%.3f'|format(interim.filtration_pct) }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-lightning"></i> Pacifying Nicotine Demand</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>Stage 1</th>
+                        <td>{{ '%.3f'|format(interim.nic_demand_stage1) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Stage 2</th>
+                        <td>{{ '%.3f'|format(interim.nic_demand_stage2) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Total</th>
+                        <td>{{ '%.3f'|format(interim.nic_demand_total) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Filtration %</th>
+                        <td>{{ '%.3f'|format(interim.total_nicotine) }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Output Weights ──────────────────────────────────────── #}
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-box-seam"></i> Output Weights</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>W_dry (Dry Weight)</th>
+                        <td>{{ '%.3f'|format(output.w_dry) }} mg</td>
+                    </tr>
+                    <tr>
+                        <th>W_tob (Tobacco Weight)</th>
+                        <td>{{ '%.3f'|format(output.w_tob) }} mg</td>
+                    </tr>
+                    <tr>
+                        <th>W_cig (Cigarette Weight)</th>
+                        <td class="fw-bold">{{ '%.3f'|format(output.w_cig) }} mg</td>
+                    </tr>
+                    <tr>
+                        <th>TW (Target Weight)</th>
+                        <td class="fw-bold text-primary">{{ '%.3f'|format(output.tw) }} mg</td>
+                    </tr>
+                    <tr class="table-light">
+                        <th>W_NTM (NTM Weight) <span class="badge bg-secondary">Input</span></th>
+                        <td>{{ '%.3f'|format(output.w_ntm) }} mg</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Input Snapshot ──────────────────────────────────────── #}
+<div class="card mt-3">
+    <div class="card-header"><i class="bi bi-input-cursor-text"></i> Input Snapshot</div>
+    <div class="card-body">
+        <h6 class="text-muted mb-2">Key Variables</h6>
+        <div class="row mb-3">
+            <div class="col-md-2"><strong>N_BLD:</strong> {{ kv.n_bld }}</div>
+            <div class="col-md-2"><strong>P_CU:</strong> {{ kv.p_cu }}</div>
+            <div class="col-md-2"><strong>T_VNT:</strong> {{ kv.t_vnt }}</div>
+            <div class="col-md-2"><strong>F_PD:</strong> {{ kv.f_pd }}</div>
+            <div class="col-md-2"><strong>M_IP:</strong> {{ kv.m_ip }}</div>
+        </div>
+        <h6 class="text-muted mb-2">Calibration Constants</h6>
+        <div class="row">
+            <div class="col-md-2"><strong>α:</strong> {{ cal.alpha }}</div>
+            <div class="col-md-2"><strong>β:</strong> {{ cal.beta }}</div>
+            <div class="col-md-2"><strong>γ:</strong> {{ cal.gamma }}</div>
+            <div class="col-md-2"><strong>δ:</strong> {{ cal.delta }}</div>
+            <div class="col-md-2"><strong>N_tgt:</strong> {{ cal.n_tgt }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

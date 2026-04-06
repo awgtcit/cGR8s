@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}{% if po %}Edit Process Order{% else %}New Process Order{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('process_orders.index') }}">Process Orders</a>
+<span class="separator">/</span>
+<span class="current">{% if po %}Edit{% else %}New{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-clipboard-data"></i> {% if po %}Edit: {{ po.process_order_number }}{% else %}New Process Order{%
+        endif %}</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post"
+            action="{% if po %}{{ url_for('process_orders.edit', id=po.id) }}{% else %}{{ url_for('process_orders.create') }}{% endif %}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if po %}<input type="hidden" name="row_version" value="{{ data.get('row_version', 0) }}">{% endif %}
+
+            <div class="row">
+                <div class="col-md-4">
+                    {{ form_field('process_order_number', 'Process Order Number', data.get('process_order_number', ''),
+                    required=true, errors=errors) }}
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="fg_code_id" class="form-label">FG Code <span class="text-danger">*</span></label>
+                        <select name="fg_code_id" id="fg_code_id" class="form-select" required>
+                            <option value="">Select FG Code</option>
+                            {% for fg in fg_codes %}
+                            <option value="{{ fg.id }}" {% if data.get('fg_code_id')==fg.id|string %}selected{% endif
+                                %}>
+                                {{ fg.fg_code }} – {{ fg.brand }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    {{ form_field('process_date', 'Process Date', data.get('process_date', ''), type='date',
+                    required=true, errors=errors) }}
+                </div>
+            </div>
+
+            {{ form_actions(url_for('process_orders.index'), submit_label='Update' if po else 'Create',
+            submit_icon='bi-check-lg') }}
+        </form>
+    </div>
+</div>
+{% endblock %}

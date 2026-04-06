@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import search_bar, pagination, empty_state %}
+{% block title %}Plug Length / Cuts{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('master_data.blends') }}">Master Data</a>
+<span class="separator">/</span>
+<span class="current">Plug Length / Cuts</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-scissors"></i> Plug Length / Cuts</h2>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        {{ search_bar('master_data.plug_length_cuts') }}
+    </div>
+    <div class="card-body p-0">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Plug Length</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lk in items %}
+                    <tr>
+                        <td><strong>{{ lk.code }}</strong></td>
+                        <td>{{ lk.display_name }}</td>
+                        <td>
+                            {% if lk.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        {{ empty_state('No Plug Length / Cuts data', 'Import data to populate this table.') }}
+        {% endif %}
+    </div>
+    {% if items and total_pages > 1 %}
+    <div class="card-footer">
+        {{ pagination(page, total_pages, 'master_data.plug_length_cuts') }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base_report.html" %}
+{% block content %}
+<table class="meta-table">
+    <tr><td class="label">Period:</td><td>{{ date_from }} – {{ date_to }}</td></tr>
+    {% if fg_filter %}<tr><td class="label">FG Code:</td><td>{{ fg_filter }}</td></tr>{% endif %}
+    <tr><td class="label">Runs:</td><td>{{ results|length }}</td></tr>
+</table>
+
+<div class="kpi-row">
+    <div class="kpi-box"><div class="value">{{ summary.total_runs }}</div><div class="label">Total Runs</div></div>
+    <div class="kpi-box"><div class="value">{{ summary.within_tolerance }}</div><div class="label">Within Tolerance</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.2f"|format(summary.avg_variance) }}%</div><div class="label">Avg Variance</div></div>
+</div>
+
+<h2>Optimizer Results</h2>
+<table class="data">
+    <thead>
+        <tr><th>Order #</th><th>FG Code</th><th>Method</th><th>Opt. Cig Wt</th><th>Opt. Tob Wt</th><th>Variance %</th><th>Status</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr>
+            <td>{{ r.process_order_number }}</td>
+            <td>{{ r.fg_code }}</td>
+            <td>{{ r.method }}</td>
+            <td>{{ "%.4f"|format(r.optimized_cigarette_weight) }}</td>
+            <td>{{ "%.4f"|format(r.optimized_tobacco_weight) }}</td>
+            <td>{{ "%.2f"|format(r.variance_percent) }}%</td>
+            <td>
+                {% if r.within_tolerance %}
+                <span class="badge badge-success">OK</span>
+                {% else %}
+                <span class="badge badge-danger">Exceeded</span>
+                {% endif %}
+            </td>
+            <td>{{ r.run_date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

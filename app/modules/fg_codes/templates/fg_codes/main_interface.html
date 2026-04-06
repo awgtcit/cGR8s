@@ -1,0 +1,1067 @@
+{% extends 'base.html' %}
+{% set page_title = 'FG Codes' %}
+{% set section = 'fg_codes' %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<span class="current">FG Codes</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── FG Codes Page ─────────────────────────────────── */
+    .fg-page {
+        padding: 0;
+    }
+
+    .fg-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-top: 4px;
+    }
+
+    .fg-header h2 {
+        font-weight: 700;
+        color: var(--cgr-forest);
+        margin: 0;
+        font-size: 1.4rem;
+    }
+
+    .fg-header .subtitle {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin-top: 2px;
+    }
+
+    .fg-header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    /* ── Search & Controls ────────────────────────────── */
+    .fg-toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .fg-search-box {
+        flex: 1;
+        min-width: 200px;
+        position: relative;
+    }
+
+    .fg-search-box i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 0.9rem;
+    }
+
+    .fg-search-box input {
+        padding-left: 36px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fff;
+        height: 40px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+    }
+
+    .fg-search-box input:focus {
+        border-color: var(--cgr-primary);
+        box-shadow: 0 0 0 3px rgba(13, 107, 60, 0.08);
+    }
+
+    .fg-count-badge {
+        font-size: 0.8rem;
+        color: #6b7280;
+        background: #f3f4f6;
+        padding: 6px 14px;
+        border-radius: 20px;
+        white-space: nowrap;
+    }
+
+    .fg-count-badge strong {
+        color: var(--cgr-primary);
+    }
+
+    /* ── Layout Grid ──────────────────────────────────── */
+    .fg-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr 300px;
+        grid-template-rows: auto auto;
+        gap: 16px;
+        min-height: calc(100vh - 200px);
+    }
+
+    .fg-list-section {
+        grid-row: 1 / 3;
+    }
+
+    .fg-detail-section {
+        grid-row: 1;
+    }
+
+    .fg-calc-section {
+        grid-row: 1 / 3;
+    }
+
+    .fg-vars-section {
+        grid-row: 2;
+    }
+
+    /* ── Cards ────────────────────────────────────────── */
+    .fg-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .fg-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        background: #fafbfc;
+    }
+
+    .fg-card-head h6 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--cgr-forest);
+        margin: 0;
+    }
+
+    .fg-card-head .badge {
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+
+    .fg-card-body {
+        flex: 1;
+        padding: 0;
+        overflow-y: auto;
+    }
+
+    .fg-card-body.padded {
+        padding: 16px;
+    }
+
+    /* ── FG Code List ─────────────────────────────────── */
+    .fg-list-section .fg-card {
+        height: 100%;
+    }
+
+    .fg-list-scroll {
+        overflow-y: auto;
+        max-height: calc(100vh - 300px);
+    }
+
+    .fg-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        cursor: pointer;
+        transition: background 0.15s;
+        gap: 10px;
+    }
+
+    .fg-item:hover {
+        background: var(--cgr-mint);
+    }
+
+    .fg-item.active {
+        background: var(--cgr-primary);
+        color: #fff;
+    }
+
+    .fg-item .fg-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: var(--cgr-mint);
+        color: var(--cgr-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .fg-item.active .fg-icon {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+    }
+
+    .fg-item-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .fg-item-code {
+        font-weight: 600;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fg-item-brand {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fg-item.active .fg-item-brand {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .fg-item-format {
+        font-size: 0.65rem;
+        background: rgba(13, 107, 60, 0.08);
+        color: var(--cgr-primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .fg-item.active .fg-item-format {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+    }
+
+    /* ── SKU Details ──────────────────────────────────── */
+    .detail-tabs-bar {
+        display: flex;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fafbfc;
+        padding: 0 16px;
+    }
+
+    .detail-tab-btn {
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6b7280;
+        border: none;
+        background: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .detail-tab-btn:hover {
+        color: var(--cgr-primary);
+    }
+
+    .detail-tab-btn.active {
+        color: var(--cgr-primary);
+        border-bottom-color: var(--cgr-primary);
+    }
+
+    .detail-tab-pane {
+        display: none;
+        padding: 16px;
+    }
+
+    .detail-tab-pane.active {
+        display: block;
+    }
+
+    .detail-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.85rem;
+    }
+
+    .detail-field:last-child {
+        border-bottom: none;
+    }
+
+    .detail-field-label {
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .detail-field-value {
+        font-weight: 600;
+        color: var(--cgr-forest);
+        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        font-size: 0.82rem;
+    }
+
+    /* ── Key Variables ────────────────────────────────── */
+    .var-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .var-item label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 4px;
+    }
+
+    .var-item input {
+        width: 100%;
+        padding: 7px 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        font-size: 0.85rem;
+        transition: border-color 0.15s;
+    }
+
+    .var-item input:focus {
+        border-color: var(--cgr-primary);
+        box-shadow: 0 0 0 3px rgba(13, 107, 60, 0.08);
+        outline: none;
+    }
+
+    .calc-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .btn-calculate {
+        flex: 1;
+        background: var(--cgr-primary);
+        color: #fff;
+        border: none;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .btn-calculate:hover {
+        background: var(--cgr-forest);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(13, 107, 60, 0.15);
+    }
+
+    .btn-calculate:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* ── Results Section ──────────────────────────────── */
+    .result-group {
+        margin-bottom: 16px;
+    }
+
+    .result-group-title {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--cgr-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--cgr-mint);
+    }
+
+    .result-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 0.82rem;
+    }
+
+    .result-row-label {
+        color: #6b7280;
+    }
+
+    .result-row-value {
+        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        font-weight: 600;
+        color: var(--cgr-forest);
+    }
+
+    .result-highlight {
+        background: var(--cgr-mint);
+        padding: 10px 14px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+    }
+
+    .result-highlight .label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--cgr-forest);
+    }
+
+    .result-highlight .value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--cgr-primary);
+        font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    /* ── Action / Quick Links ─────────────────────────── */
+    .quick-actions {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px solid #f3f4f6;
+        background: #fafbfc;
+    }
+
+    .quick-action-btn {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #fff;
+        color: var(--cgr-forest);
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+    }
+
+    .quick-action-btn:hover {
+        border-color: var(--cgr-primary);
+        color: var(--cgr-primary);
+        background: var(--cgr-mint);
+    }
+
+    .quick-action-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    /* ── Empty / Loading States ───────────────────────── */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        color: #9ca3af;
+        text-align: center;
+    }
+
+    .empty-state i {
+        font-size: 2rem;
+        margin-bottom: 8px;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .spinner-sm {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #e5e7eb;
+        border-top-color: var(--cgr-primary);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 1200px) {
+        .fg-grid {
+            grid-template-columns: 240px 1fr;
+            grid-template-rows: auto auto auto;
+        }
+
+        .fg-calc-section {
+            grid-column: 1 / -1;
+            grid-row: 3;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .fg-grid {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
+        }
+
+        .fg-list-section,
+        .fg-detail-section,
+        .fg-vars-section,
+        .fg-calc-section {
+            grid-column: 1;
+            grid-row: auto;
+        }
+
+        .fg-list-scroll {
+            max-height: 250px;
+        }
+
+        .var-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fg-page">
+    <!-- Header -->
+    <div class="fg-header">
+        <div>
+            <h2><i class="bi bi-upc-scan me-2"></i>FG Codes</h2>
+            <div class="subtitle">Target Weight Calculation System</div>
+        </div>
+        <div class="fg-header-actions">
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#processOrderModal"
+                id="createPOHeaderBtn" disabled>
+                <i class="bi bi-plus-lg me-1"></i>Process Order
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="fg-toolbar">
+        <div class="fg-search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" class="form-control" placeholder="Search FG codes, brands…">
+        </div>
+        <div class="fg-count-badge" id="recordCount">
+            <strong>0</strong> / 0 records
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="fg-grid">
+        <!-- FG Code List -->
+        <div class="fg-list-section">
+            <div class="fg-card" style="height:100%;">
+                <div class="fg-card-head">
+                    <h6><i class="bi bi-list-ul me-1"></i> FG Code List</h6>
+                    <span class="badge bg-success bg-opacity-10 text-success" id="listBadge">Ready</span>
+                </div>
+                <div class="fg-card-body">
+                    <div class="fg-list-scroll" id="fgList">
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>Loading FG codes…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SKU Details -->
+        <div class="fg-detail-section">
+            <div class="fg-card">
+                <div class="fg-card-head">
+                    <h6><i class="bi bi-info-circle me-1"></i> SKU Details</h6>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary" id="selectedBadge">None
+                        selected</span>
+                </div>
+                <div id="skuDetailsContent">
+                    <div class="empty-state" style="min-height:180px;">
+                        <i class="bi bi-cursor"></i>
+                        <p>Select an FG Code to view details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Variables + Calibration -->
+        <div class="fg-vars-section">
+            <div class="fg-card">
+                <div class="fg-card-head">
+                    <h6><i class="bi bi-sliders me-1"></i> Key Variables</h6>
+                </div>
+                <div class="fg-card-body padded">
+                    <div class="var-grid">
+                        <div class="var-item">
+                            <label>N_BLD <small class="text-muted">(Nicotine)</small></label>
+                            <input type="number" id="n_bld" step="0.001" value="0.000">
+                        </div>
+                        <div class="var-item">
+                            <label>P_CU <small class="text-muted">(Paper CU)</small></label>
+                            <input type="number" id="p_cu" step="0.001" value="0.000">
+                        </div>
+                        <div class="var-item">
+                            <label>T_VNT <small class="text-muted">(Ventilation)</small></label>
+                            <input type="number" id="t_vnt" step="0.001" value="0.000">
+                        </div>
+                        <div class="var-item">
+                            <label>F_PD <small class="text-muted">(Filter PD)</small></label>
+                            <input type="number" id="f_pd" step="0.001" value="0.000">
+                        </div>
+                        <div class="var-item">
+                            <label>M_IP <small class="text-muted">(Moisture)</small></label>
+                            <input type="number" id="m_ip" step="0.001" value="0.000">
+                        </div>
+                        <div class="var-item">
+                            <label>W_NTM <small class="text-muted">(NTM Weight)</small></label>
+                            <input type="number" id="w_ntm" step="0.001" value="0.000">
+                        </div>
+                    </div>
+                    <div class="calc-actions">
+                        <button type="button" id="calculateBtn" class="btn-calculate" disabled>
+                            <i class="bi bi-calculator me-1"></i> Calculate Target
+                        </button>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button type="button" id="nplBtn" class="quick-action-btn" disabled>
+                        <i class="bi bi-graph-down me-1"></i>NPL
+                    </button>
+                    <button type="button" id="optimizerBtn" class="quick-action-btn" disabled>
+                        <i class="bi bi-graph-up-arrow me-1"></i>Optimizer
+                    </button>
+                    <button type="button" class="quick-action-btn" data-bs-toggle="modal"
+                        data-bs-target="#processOrderModal" id="createPOBtn" disabled>
+                        <i class="bi bi-plus-circle me-1"></i>Order
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="fg-calc-section">
+            <div class="fg-card" style="height:100%;">
+                <div class="fg-card-head">
+                    <h6><i class="bi bi-bar-chart me-1"></i> Calculation Results</h6>
+                </div>
+                <div class="fg-card-body padded" id="resultsContent">
+                    <div class="empty-state" style="min-height:220px;">
+                        <i class="bi bi-play-circle"></i>
+                        <p>Configure variables and run calculation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Process Order Modal -->
+<div class="modal fade" id="processOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:12px; border:none;">
+            <div class="modal-header" style="background:var(--cgr-mint); border-bottom:1px solid #e5e7eb;">
+                <h6 class="modal-title fw-bold" style="color:var(--cgr-forest);">
+                    <i class="bi bi-clipboard-plus me-1"></i> Create Process Order
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="processOrderForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:0.85rem;">Process Order ID</label>
+                        <input type="text" id="processOrderId" class="form-control" placeholder="e.g. 1013500" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:0.85rem;">Process Date</label>
+                        <input type="date" id="processDate" class="form-control" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid #f3f4f6;">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="createProcessOrderBtn" class="btn btn-sm btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Create Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+        $.ajaxSetup({
+            beforeSend: function (xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                }
+            }
+        });
+
+        let selectedFgCode = null;
+        let skuDetails = null;
+        let searchTimer = null;
+
+        function esc(str) {
+            if (str == null || str === '') return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ── Load on init ──────────────────────────────────
+        loadFgCodes(500, false);
+
+        // ── Search with debounce ──────────────────────────
+        $('#searchInput').on('input', function () {
+            clearTimeout(searchTimer);
+            const q = $(this).val().trim();
+            searchTimer = setTimeout(() => loadFgCodes(500, false, q), 300);
+        });
+
+        function loadFgCodes(limit, loadAll, search) {
+            $('#listBadge').text('Loading…').removeClass('text-success bg-success').addClass('text-warning bg-warning');
+            $('#fgList').html('<div class="empty-state"><div class="spinner-sm"></div><p class="mt-2">Loading…</p></div>');
+
+            var params = { limit: limit, q: search || '' };
+            if (loadAll) params.all = 'true';
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_load_codes") }}',
+                data: params,
+                success: function (data) {
+                    renderList(data);
+                    $('#listBadge').text(data.total_count + ' total').removeClass('text-warning bg-warning').addClass('text-success bg-success');
+                },
+                error: function () {
+                    $('#fgList').html('<div class="empty-state"><i class="bi bi-exclamation-triangle text-danger"></i><p>Failed to load</p></div>');
+                    $('#listBadge').text('Error').removeClass('text-success bg-success text-warning bg-warning').addClass('text-danger bg-danger');
+                }
+            });
+        }
+
+        function renderList(data) {
+            $('#recordCount').html('<strong>' + data.loaded_count + '</strong> / ' + data.total_count + ' records');
+
+            if (!data.codes.length) {
+                $('#fgList').html('<div class="empty-state"><i class="bi bi-inbox"></i><p>No matching codes</p></div>');
+                return;
+            }
+
+            let html = '';
+            data.codes.forEach(function (c) {
+                const brand = esc(c.brand || '');
+                const fmt = esc(c.format || '');
+                const code = esc(c.fg_code);
+                html += '<div class="fg-item" data-code="' + code + '">'
+                    + '  <div class="fg-icon"><i class="bi bi-upc"></i></div>'
+                    + '  <div class="fg-item-info">'
+                    + '    <div class="fg-item-code">' + code + '</div>'
+                    + '    <div class="fg-item-brand">' + brand + '</div>'
+                    + '  </div>'
+                    + (fmt ? '<span class="fg-item-format">' + fmt + '</span>' : '')
+                    + '</div>';
+            });
+            $('#fgList').html(html);
+        }
+
+        // ── Item Selection ────────────────────────────────
+        $(document).on('click', '.fg-item', function () {
+            $('.fg-item').removeClass('active');
+            $(this).addClass('active');
+            selectedFgCode = $(this).data('code');
+            loadSkuDetails(selectedFgCode);
+        });
+
+        function loadSkuDetails(code) {
+            $('#skuDetailsContent').html('<div class="empty-state" style="min-height:180px"><div class="spinner-sm"></div><p class="mt-2">Loading…</p></div>');
+            $('#selectedBadge').text('Loading…');
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_sku_details", fg_code="__CODE__") }}'.replace('__CODE__', code),
+                success: function (data) {
+                    skuDetails = data;
+                    renderDetails(data);
+                    loadKeyVars(data);
+                    enableControls();
+                    $('#selectedBadge').text(code).removeClass('text-secondary bg-secondary').addClass('text-primary bg-primary');
+                },
+                error: function () {
+                    $('#skuDetailsContent').html('<div class="empty-state" style="min-height:180px"><i class="bi bi-exclamation-triangle text-danger"></i><p>Error loading</p></div>');
+                }
+            });
+        }
+
+        function renderDetails(d) {
+            const t = d.targets || {};
+            const html = ''
+                + '<div class="detail-tabs-bar">'
+                + '  <button class="detail-tab-btn active" data-tab="product">Product</button>'
+                + '  <button class="detail-tab-btn" data-tab="blend">Blend</button>'
+                + '  <button class="detail-tab-btn" data-tab="physical">Physical</button>'
+                + '  <button class="detail-tab-btn" data-tab="calibration">Calibration</button>'
+                + '  <button class="detail-tab-btn" data-tab="targets">Targets</button>'
+                + '</div>'
+                + '<div class="detail-tab-pane active" data-tab="product">'
+                + field('FG Code', d.fg_details.fg_code)
+                + field('Brand', d.fg_details.brand)
+                + field('GTIN', d.fg_details.fg_gtin)
+                + field('Format', d.fg_details.format)
+                + field('TOW', d.fg_details.tow_used)
+                + field('Filter Code', d.fg_details.filter_code)
+                + '</div>'
+                + '<div class="detail-tab-pane" data-tab="blend">'
+                + field('Blend Code', d.blend_details.blend_code)
+                + field('Blend Name', d.blend_details.blend)
+                + field('Blend GTIN', d.blend_details.blend_gtin)
+                + '</div>'
+                + '<div class="detail-tab-pane" data-tab="physical">'
+                + field('Cig Length', d.physical_params.cig_length)
+                + field('Tobacco Rod', d.physical_params.tobacco_rod_length)
+                + field('Filter Length', d.physical_params.filter_length)
+                + field('Plug Length', d.physical_params.plug_length)
+                + field('Cig Code', d.physical_params.cig_code)
+                + field('C_PLG', d.physical_params.c_plg)
+                + '</div>'
+                + '<div class="detail-tab-pane" data-tab="calibration">'
+                + '<div class="result-group-title">Constants (Global)</div>'
+                + field('Alpha (α)', d.calibration.alpha)
+                + field('Beta (β)', d.calibration.beta)
+                + field('Delta (δ)', d.calibration.delta)
+                + '<div class="result-group-title mt-2">Gamma (Format-based)</div>'
+                + field('Format', d.calibration.gamma_format)
+                + field('Plug Length', d.calibration.gamma_plug_length)
+                + field('Condition (N<0.3)', d.calibration.gamma_condition)
+                + field('Gamma (γ)', d.calibration.gamma)
+                + '<div class="result-group-title mt-2">Target</div>'
+                + field('N Target', d.calibration.n_tgt)
+                + (d.last_run_date ? field('Last Run', d.last_run_date) : '')
+                + '</div>'
+                + '<div class="detail-tab-pane" data-tab="targets" style="max-height:400px;overflow-y:auto">'
+                + field('Family', t.family_name)
+                + field('Target Nic', t.target_nic)
+                + '<div class="result-group-title mt-2">Circumference</div>'
+                + field('Mean', t.circumference_mean)
+                + field('UL', t.circumference_ul)
+                + field('LL', t.circumference_ll)
+                + field('SD', t.circumference_sd)
+                + '<div class="result-group-title mt-2">Cig PDO</div>'
+                + field('PDO', t.cig_pdo)
+                + field('UL', t.cig_pdo_ul)
+                + field('LL', t.cig_pdo_ll)
+                + '<div class="result-group-title mt-2">Tip Ventilation</div>'
+                + field('Mean', t.tip_ventilation)
+                + field('UL', t.tip_ventilation_ul)
+                + field('LL', t.tip_ventilation_ll)
+                + field('SD', t.tip_ventilation_sd)
+                + '<div class="result-group-title mt-2">Weight</div>'
+                + field('NTM Wt Mean', t.ntm_wt_mean)
+                + field('Cig Wt SD Max', t.cig_wt_sd_max)
+                + field('Filter Wt', t.filter_weight)
+                + '<div class="result-group-title mt-2">Filter PD</div>'
+                + field('PD', t.filter_pd)
+                + field('UL', t.filter_pd_ul)
+                + field('LL', t.filter_pd_ll)
+                + '<div class="result-group-title mt-2">Hardness</div>'
+                + field('Hardness', t.cig_hardness)
+                + field('UL', t.cig_hardness_ul)
+                + field('LL', t.cig_hardness_ll)
+                + field('Corrected', t.cig_corrected_hardness)
+                + '<div class="result-group-title mt-2">Moisture</div>'
+                + field('C48', t.c48_moisture)
+                + field('C48 UL', t.c48_moisture_ul)
+                + field('C48 LL', t.c48_moisture_ll)
+                + field('Maker', t.maker_moisture)
+                + field('Maker UL', t.maker_moisture_ul)
+                + field('Maker LL', t.maker_moisture_ll)
+                + '<div class="result-group-title mt-2">Pack OV & SSI</div>'
+                + field('Pack OV', t.pack_ov)
+                + field('OV UL', t.pack_ov_ul)
+                + field('OV LL', t.pack_ov_ll)
+                + field('SSI', t.ssi)
+                + field('SSI UL', t.ssi_ul)
+                + field('SSI LL', t.ssi_ll)
+                + '<div class="result-group-title mt-2">Filling Power</div>'
+                + field('FP', t.filling_power)
+                + field('FP UL', t.filling_power_ul)
+                + field('FP LL', t.filling_power_ll)
+                + field('FP Corrected UL', t.filling_power_corrected_ul)
+                + '<div class="result-group-title mt-2">Other</div>'
+                + field('Loose Shorts Max', t.loose_shorts_max)
+                + field('Lamina CPI', t.lamina_cpi)
+                + field('Pan % Max', t.pan_pct_max)
+                + field('Filter Desc', t.filter_desc)
+                + field('Plug Wrap CU', t.plug_wrap_cu)
+                + '</div>';
+            $('#skuDetailsContent').html(html);
+        }
+
+        function field(label, val) {
+            return '<div class="detail-field"><span class="detail-field-label">' + esc(label) + '</span>'
+                + '<span class="detail-field-value">' + (val != null && val !== '' ? esc(val) : '—') + '</span></div>';
+        }
+
+        function loadKeyVars(d) {
+            if (d.key_variables) {
+                Object.keys(d.key_variables).forEach(function (k) {
+                    var el = document.getElementById(k);
+                    if (el) el.value = d.key_variables[k] || 0;
+                });
+            }
+            // Pre-fill W_NTM from targets
+            if (d.targets && d.targets.ntm_wt_mean != null) {
+                $('#w_ntm').val(parseFloat(d.targets.ntm_wt_mean) || 0);
+            }
+        }
+
+        function enableControls() {
+            $('#calculateBtn, #nplBtn, #optimizerBtn, #createPOBtn, #createPOHeaderBtn').prop('disabled', false);
+        }
+
+        // ── Tab switching ─────────────────────────────────
+        $(document).on('click', '.detail-tab-btn', function () {
+            const tab = $(this).data('tab');
+            $('.detail-tab-btn, .detail-tab-pane').removeClass('active');
+            $(this).addClass('active');
+            $('.detail-tab-pane[data-tab="' + tab + '"]').addClass('active');
+        });
+
+        // ── Calculate ─────────────────────────────────────
+        $('#calculateBtn').click(function () {
+            const kv = {
+                n_bld: parseFloat($('#n_bld').val()) || 0,
+                p_cu: parseFloat($('#p_cu').val()) || 0,
+                t_vnt: parseFloat($('#t_vnt').val()) || 0,
+                f_pd: parseFloat($('#f_pd').val()) || 0,
+                m_ip: parseFloat($('#m_ip').val()) || 0
+            };
+            const cal = skuDetails ? skuDetails.calibration : {};
+            const fgInfo = {
+                ntm_wt_mean: parseFloat($('#w_ntm').val()) || 0,
+                c_plg: skuDetails && skuDetails.physical_params ? parseInt(skuDetails.physical_params.c_plg) || 1 : 1
+            };
+
+            $('#resultsContent').html('<div class="empty-state" style="min-height:220px"><div class="spinner-sm"></div><p class="mt-2">Calculating…</p></div>');
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_calculate_target") }}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ key_variables: kv, calibration: cal, fg_info: fgInfo }),
+                success: function (data) { lastCalcResults = data; renderResults(data); },
+                error: function () {
+                    $('#resultsContent').html('<div class="empty-state" style="min-height:220px"><i class="bi bi-exclamation-triangle text-danger"></i><p>Calculation failed</p></div>');
+                }
+            });
+        });
+
+        function renderResults(d) {
+            let html = '';
+            if (d.interim_output) {
+                html += '<div class="result-group">'
+                    + '<div class="result-group-title">Interim Output</div>'
+                    + rRow('Stage-1 Dilution', d.interim_output.stage1_dilution)
+                    + rRow('Stage-2 Dilution', d.interim_output.stage2_dilution)
+                    + rRow('Total Dilution', d.interim_output.total_dilution)
+                    + rRow('Filtration %', d.interim_output.filtration_pct)
+                    + '</div>';
+            }
+            if (d.output_data) {
+                html += '<div class="result-group">'
+                    + '<div class="result-group-title">Output Data</div>'
+                    + rRow('W DRY', d.output_data.w_dry)
+                    + rRow('W TOB', d.output_data.w_tob)
+                    + rRow('W CIG', d.output_data.w_cig)
+                    + '</div>';
+                html += '<div class="result-group">'
+                    + '<div class="result-group-title">Input Constants</div>'
+                    + rRow('W NTM (from FG Code)', d.output_data.w_ntm)
+                    + '</div>';
+                html += '<div class="result-highlight">'
+                    + '<span class="label">Target Weight</span>'
+                    + '<span class="value">' + (d.output_data.w_cig != null ? parseFloat(d.output_data.w_cig).toFixed(3) : '—') + ' mg</span>'
+                    + '</div>';
+            }
+            $('#resultsContent').html(html || '<div class="empty-state"><p>No results</p></div>');
+        }
+
+        function rRow(label, val) {
+            const v = val != null ? (typeof val === 'number' ? val.toFixed(3) : esc(val)) : '—';
+            return '<div class="result-row"><span class="result-row-label">' + esc(label) + '</span><span class="result-row-value">' + v + '</span></div>';
+        }
+
+        let lastCalcResults = null;
+
+        // ── Navigation buttons ────────────────────────────
+        $('#nplBtn').click(function () { window.location.href = '{{ url_for("npl.index") }}'; });
+        $('#optimizerBtn').click(function () { window.location.href = '{{ url_for("optimizer.index") }}'; });
+
+        // ── Process Order creation ────────────────────────
+        $('#processDate').val(new Date().toISOString().split('T')[0]);
+
+        $('#createProcessOrderBtn').click(function () {
+            const poId = $('#processOrderId').val().trim();
+            const poDate = $('#processDate').val();
+            if (!poId || !poDate) { alert('Please fill all fields'); return; }
+
+            const kv = {
+                n_bld: parseFloat($('#n_bld').val()) || 0,
+                p_cu: parseFloat($('#p_cu').val()) || 0,
+                t_vnt: parseFloat($('#t_vnt').val()) || 0,
+                f_pd: parseFloat($('#f_pd').val()) || 0,
+                m_ip: parseFloat($('#m_ip').val()) || 0
+            };
+            const cal = skuDetails ? skuDetails.calibration : {};
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_create_process_order") }}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    fg_code: String(selectedFgCode),
+                    process_order_id: poId,
+                    process_date: poDate,
+                    key_variables: kv,
+                    calibration: cal,
+                    calculation_results: lastCalcResults || {}
+                }),
+                success: function (resp) {
+                    const msg = resp.updated
+                        ? 'Process Order updated successfully'
+                        : 'Process Order created successfully';
+                    alert(msg);
+                    $('#processOrderModal').modal('hide');
+                    $('#processOrderForm')[0].reset();
+                    $('#processDate').val(new Date().toISOString().split('T')[0]);
+                },
+                error: function (xhr) {
+                    alert(xhr.responseJSON ? xhr.responseJSON.error : 'Error creating order');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

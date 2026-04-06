@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}Run Optimizer{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('optimizer.index') }}">Optimizer</a>
+<span class="separator">/</span>
+<span class="current">Run</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-sliders"></i> Optimizer – {{ po.process_order_number }}</h2>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">Current Key Variables</div>
+            <div class="card-body">
+                {% if kv %}
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>N_BLD</th>
+                        <td>{{ kv.n_bld }}</td>
+                    </tr>
+                    <tr>
+                        <th>P_CU</th>
+                        <td>{{ kv.p_cu }}</td>
+                    </tr>
+                    <tr>
+                        <th>T_VNT</th>
+                        <td>{{ kv.t_vnt }}</td>
+                    </tr>
+                    <tr>
+                        <th>F_PD</th>
+                        <td>{{ kv.f_pd }}</td>
+                    </tr>
+                    <tr>
+                        <th>M_IP</th>
+                        <td>{{ kv.m_ip }}</td>
+                    </tr>
+                </table>
+                {% else %}
+                <p class="text-muted">No key variables calculated yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{{ url_for('optimizer.run', process_order_id=po.id) }}"
+                    x-data="{ method: '{{ data.get('method', 'adjustment') }}' }">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Optimization Method</label>
+                        <select name="method" class="form-select" x-model="method">
+                            <option value="adjustment">Adjustment (Delta)</option>
+                            <option value="manual">Manual Entry</option>
+                            <option value="direct">Direct Input</option>
+                        </select>
+                    </div>
+
+                    <!-- Adjustment Method -->
+                    <div x-show="method === 'adjustment'">
+                        <h6>Adjustments (± delta from base)</h6>
+                        <div class="row">
+                            <div class="col-md-4">{{ form_field('adjustment_n_bld', 'N_BLD Adjustment',
+                                data.get('adjustment_n_bld', '0'), type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('adjustment_p_cu', 'P_CU Adjustment',
+                                data.get('adjustment_p_cu', '0'), type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('adjustment_t_vnt', 'T_VNT Adjustment',
+                                data.get('adjustment_t_vnt', '0'), type='number', step='0.0001', errors=errors) }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">{{ form_field('adjustment_f_pd', 'F_PD Adjustment',
+                                data.get('adjustment_f_pd', '0'), type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('adjustment_m_ip', 'M_IP Adjustment',
+                                data.get('adjustment_m_ip', '0'), type='number', step='0.0001', errors=errors) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Method -->
+                    <div x-show="method === 'manual'">
+                        <h6>Manual Key Variable Values</h6>
+                        <div class="row">
+                            <div class="col-md-4">{{ form_field('manual_n_bld', 'N_BLD', data.get('manual_n_bld', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('manual_p_cu', 'P_CU', data.get('manual_p_cu', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('manual_t_vnt', 'T_VNT', data.get('manual_t_vnt', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">{{ form_field('manual_f_pd', 'F_PD', data.get('manual_f_pd', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('manual_m_ip', 'M_IP', data.get('manual_m_ip', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Direct Method -->
+                    <div x-show="method === 'direct'">
+                        <h6>Direct Target Values</h6>
+                        <div class="row">
+                            <div class="col-md-4">{{ form_field('direct_n_bld', 'N_BLD', data.get('direct_n_bld', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('direct_p_cu', 'P_CU', data.get('direct_p_cu', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('direct_t_vnt', 'T_VNT', data.get('direct_t_vnt', ''),
+                                type='number', step='0.0001', errors=errors) }}</div>
+                        </div>
+                    </div>
+
+                    {{ form_actions(url_for('optimizer.index'), 'Run Optimizer', 'bi-sliders') }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

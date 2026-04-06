@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import form_field, form_actions %}
+{% block title %}Submit Batch Job{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('batch.index') }}">Batch Processing</a>
+<span class="separator">/</span>
+<span class="current">Submit</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-collection"></i> Submit Batch Job</h2>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('batch.submit') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label">Job Type</label>
+                <select name="job_type" class="form-select" required>
+                    <option value="">-- Select --</option>
+                    <option value="qa_report" {{ 'selected' if data.get('job_type')=='qa_report' }}>QA Reports</option>
+                    <option value="npl_calculation" {{ 'selected' if data.get('job_type')=='npl_calculation' }}>NPL
+                        Calculations</option>
+                    <option value="optimizer" {{ 'selected' if data.get('job_type')=='optimizer' }}>Optimizer Runs
+                    </option>
+                </select>
+                {% if errors and errors.get('job_type') %}
+                <div class="invalid-feedback d-block">{{ errors.job_type }}</div>
+                {% endif %}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_field('date_from', 'From Date', data.get('date_from', ''), type='date', errors=errors) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form_field('date_to', 'To Date', data.get('date_to', ''), type='date', errors=errors) }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">FG Code Filter (optional)</label>
+                <select name="fg_code_id" class="form-select">
+                    <option value="">All FG Codes</option>
+                    {% for fg in fg_codes %}
+                    <option value="{{ fg.id }}" {{ 'selected' if data.get('fg_code_id')==fg.id|string }}>{{ fg.fg_code
+                        }} – {{ fg.brand_family }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Notes (optional)</label>
+                <textarea name="notes" class="form-control" rows="2">{{ data.get('notes', '') }}</textarea>
+            </div>
+
+            {{ form_actions(url_for('batch.index'), submit_label='Submit Job', submit_icon='bi-play-fill') }}
+        </form>
+    </div>
+</div>
+{% endblock %}

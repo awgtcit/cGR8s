@@ -1,0 +1,41 @@
+{% extends "base_report.html" %}
+{% block content %}
+<table class="meta-table">
+    <tr><td class="label">Period:</td><td>{{ date_from }} – {{ date_to }}</td></tr>
+    {% if fg_filter %}<tr><td class="label">FG Code:</td><td>{{ fg_filter }}</td></tr>{% endif %}
+    <tr><td class="label">Records:</td><td>{{ results|length }}</td></tr>
+</table>
+
+<div class="kpi-row">
+    <div class="kpi-box"><div class="value">{{ "%.2f"|format(summary.avg_npl_pct) }}%</div><div class="label">Avg NPL %</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.0f"|format(summary.total_tac) }}</div><div class="label">Total TAC</div></div>
+    <div class="kpi-box"><div class="value">{{ "%.0f"|format(summary.total_ttc) }}</div><div class="label">Total TTC</div></div>
+    <div class="kpi-box"><div class="value">{{ summary.within_threshold }}</div><div class="label">Within Threshold</div></div>
+</div>
+
+<h2>NPL Calculations</h2>
+<table class="data">
+    <thead>
+        <tr><th>Order #</th><th>FG Code</th><th>TAC</th><th>TTC</th><th>NPL %</th><th>Threshold</th><th>Calculated</th></tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr>
+            <td>{{ r.process_order_number }}</td>
+            <td>{{ r.fg_code }}</td>
+            <td>{{ "%.0f"|format(r.total_actual_consumption) }}</td>
+            <td>{{ "%.0f"|format(r.total_theoretical_consumption) }}</td>
+            <td><strong>{{ "%.2f"|format(r.npl_percentage) }}%</strong></td>
+            <td>
+                {% if r.within_threshold %}
+                <span class="badge badge-success">OK</span>
+                {% else %}
+                <span class="badge badge-danger">Exceeded</span>
+                {% endif %}
+            </td>
+            <td>{{ r.calculated_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
