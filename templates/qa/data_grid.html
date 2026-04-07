@@ -509,6 +509,39 @@ Column AA = TP (instead of TISS).
         background: #c8e6c9;
     }
 
+    /* ── Frozen columns: cols 1-6 (RID → SKU) ─────────── */
+    .excel-grid thead th.frozen,
+    .excel-grid tbody td.frozen {
+        position: sticky;
+        z-index: 1;
+    }
+
+    .excel-grid thead th.frozen {
+        z-index: 3;
+        /* intersection of sticky-top + sticky-left */
+    }
+
+    .excel-grid tbody td.frozen {
+        background: #fff;
+    }
+
+    .excel-grid tbody tr:nth-child(even) td.frozen {
+        background: #f9f9f9;
+    }
+
+    .excel-grid tbody tr:hover td.frozen {
+        background: #e8f5e9;
+    }
+
+    .excel-grid tbody tr.selected td.frozen {
+        background: #c8e6c9;
+    }
+
+    .excel-grid thead th.frozen-last,
+    .excel-grid tbody td.frozen-last {
+        border-right: 2px solid #b4c9a8;
+    }
+
     /* ── Row number column ─────────────── */
     .excel-grid thead th:nth-child(1),
     .excel-grid tbody td:nth-child(1) {
@@ -968,6 +1001,67 @@ Column AA = TP (instead of TISS).
             if (el) { new bootstrap.Tab(el).show(); }
         }
     })();
+
+    /* ── Freeze columns up to SKU (cols 1-6) ── */
+    const FREEZE_COUNT = 6; // RID, QR Date, Prod. Date, NPL Date, Process Order, SKU
+
+    function applyFrozenColumns() {
+        document.querySelectorAll('.excel-grid').forEach(function (tbl) {
+            var headerCells = tbl.querySelectorAll('thead tr th');
+            if (!headerCells.length || headerCells.length < FREEZE_COUNT) return;
+
+            // Mark frozen classes on header cells
+            for (var i = 0; i < FREEZE_COUNT; i++) {
+                headerCells[i].classList.add('frozen');
+                if (i === FREEZE_COUNT - 1) headerCells[i].classList.add('frozen-last');
+            }
+
+            // Mark frozen classes on body cells
+            tbl.querySelectorAll('tbody tr').forEach(function (tr) {
+                var cells = tr.children;
+                for (var i = 0; i < Math.min(FREEZE_COUNT, cells.length); i++) {
+                    cells[i].classList.add('frozen');
+                    if (i === FREEZE_COUNT - 1) cells[i].classList.add('frozen-last');
+                }
+            });
+
+            // Compute left offsets from actual rendered widths
+            var offsets = [];
+            var cumLeft = 0;
+            for (var i = 0; i < FREEZE_COUNT; i++) {
+                offsets.push(cumLeft);
+                cumLeft += headerCells[i].offsetWidth;
+            }
+
+            // Inject a single <style> tag for this table instead of per-cell style writes
+            var tblId = tbl.id;
+            var oldStyle = document.getElementById('frozen-offsets-' + tblId);
+            if (oldStyle) oldStyle.remove();
+
+            var css = '';
+            for (var i = 0; i < FREEZE_COUNT; i++) {
+                var sel = '#' + tblId + ' th:nth-child(' + (i + 1) + '), #' + tblId + ' td:nth-child(' + (i + 1) + ')';
+                css += sel + '{ left: ' + offsets[i] + 'px; }\n';
+            }
+
+            var styleEl = document.createElement('style');
+            styleEl.id = 'frozen-offsets-' + tblId;
+            styleEl.textContent = css;
+            document.head.appendChild(styleEl);
+        });
+    }
+
+    // Run after DOM is rendered and layout is computed
+    requestAnimationFrame(function () {
+        requestAnimationFrame(applyFrozenColumns);
+    });
+
+    // Re-apply when switching tabs (grids may not be measured until visible)
+    document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(function (tab) {
+        tab.addEventListener('shown.bs.tab', function () {
+            requestAnimationFrame(applyFrozenColumns);
+        });
+    });
 </script>
 
 <div class="tab-content">
