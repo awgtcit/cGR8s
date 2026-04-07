@@ -177,8 +177,78 @@ def change_status(id):
 @require_permission(Permissions.PROCESS_ORDER_DELETE)
 def delete(id):
     repo = ProcessOrderRepository(g.db)
-    repo.soft_delete(id)
-    g.db.commit()
-    AuditLogger.log(AuditAction.DELETE, 'ProcessOrder', entity_id=id, module='process_orders')
-    flash_success('Process Order deleted')
+    po = repo.get_by_id(id)
+    if not po:
+        from app.utils.errors import NotFoundError
+        raise NotFoundError('Process Order', id)
+
+    # Cascade-delete all child records (order matters for FK constraints)
+    from app.models.qa import QAAnalysis, QAUpdate
+    from app.models.optimizer import OptimizerRun, OptimizerInput, OptimizerResult
+    from app.models.npl import NPLInput, NPLResult
+    from app.models.target_weight_result import TargetWeightResult
+    from app.models.key_variable import ProcessOrderKeyVariable
+    from app.models.report import Report
+
+    try:
+        # 1. QAUpdate (child of QAAnalysis)
+        qa_ids = [r.id for r in g.db.query(QAAnalysis.id).filter(
+            QAAnalysis.process_order_id == id).all()]
+        if qa_ids:
+            g.db.query(QAUpdate).filter(QAUpdate.qa_analysis_id.in_(qa_ids)).delete(
+                synchronize_session=False)
+
+        # 2. QAAnalysis
+        g.db.query(QAAnalysis).filter(
+            QAAnalysis.process_order_id == id).delete(synchronize_session=False)
+
+        # 3. OptimizerInput / OptimizerResult (children of OptimizerRun)
+        opt_ids = [r.id for r in g.db.query(OptimizerRun.id).filter(
+            OptimizerRun.process_order_id == id).all()]
+        if opt_ids:
+            g.db.query(OptimizerResult).filter(
+                OptimizerResult.optimizer_run_id.in_(opt_ids)).delete(
+                synchronize_session=False)
+            g.db.query(OptimizerInput).filter(
+                OptimizerInput.optimizer_run_id.in_(opt_ids)).delete(
+                synchronize_session=False)
+
+        # 4. OptimizerRun
+        g.db.query(OptimizerRun).filter(
+            OptimizerRun.process_order_id == id).delete(synchronize_session=False)
+
+        # 5. NPLResult
+        g.db.query(NPLResult).filter(
+            NPLResult.process_order_id == id).delete(synchronize_session=False)
+
+        # 6. NPLInput
+        g.db.query(NPLInput).filter(
+            NPLInput.process_order_id == id).delete(synchronize_session=False)
+
+        # 7. TargetWeightResult
+        g.db.query(TargetWeightResult).filter(
+            TargetWeightResult.process_order_id == id).delete(synchronize_session=False)
+
+        # 8. ProcessOrderKeyVariable
+        g.db.query(ProcessOrderKeyVariable).filter(
+            ProcessOrderKeyVariable.process_order_id == id).delete(
+            synchronize_session=False)
+
+        # 9. Reports
+        g.db.query(Report).filter(
+            Report.process_order_id == id).delete(synchronize_session=False)
+
+        # 10. Soft-delete ProcessOrder
+        repo.soft_delete(id, user_id=getattr(g, 'user_id', None))
+        g.db.commit()
+    except Exception:
+        g.db.rollback()
+        flash_error('Failed to delete Process Order – please try again')
+        return redirect(url_for('process_orders.detail', id=id))
+
+    AuditLogger.log(AuditAction.DELETE, 'ProcessOrder', entity_id=id,
+                    after_value={'cascade': True,
+                                 'process_order_number': po.process_order_number},
+                    module='process_orders')
+    flash_success(f'Process Order {po.process_order_number} and all related data deleted')
     return redirect(url_for('process_orders.index'))

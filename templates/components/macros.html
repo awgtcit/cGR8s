@@ -169,10 +169,10 @@ help_text='') %}
 {% endmacro %}
 
 {# ── Delete Button ───────────────────────────────────────── #}
-{% macro delete_button(url, csrf_token) %}
+{% macro delete_button(url, csrf_token, confirm_msg='Are you sure you want to delete this?') %}
 <form method="post" action="{{ url }}" class="d-inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Are you sure you want to delete this?">
+    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="{{ confirm_msg }}">
         <i class="bi bi-trash"></i>
     </button>
 </form>
