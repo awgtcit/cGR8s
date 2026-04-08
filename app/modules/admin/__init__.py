@@ -272,24 +272,131 @@ def access_control_roles():
     return render_template('admin/partials/roles_tab.html', roles=roles)
 
 
+@bp.route('/access-control/roles/create')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def create_role_form():
+    """HTMX partial – create role modal form."""
+    return render_template('admin/partials/create_role_modal.html')
+
+
+@bp.route('/access-control/roles/create', methods=['POST'])
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def create_role():
+    """Create a new role via Auth-App."""
+    import re
+    app_id = _auth_ctx()
+    name = (request.form.get('role_name') or '').strip()
+    code = (request.form.get('role_code') or '').strip().upper()
+    description = (request.form.get('role_description') or '').strip()
+
+    if not name or not code:
+        flash('Role name and code are required.', 'error')
+        return redirect(url_for('admin.access_control'))
+
+    # Validate code format: alphanumeric + underscore, prefixed with CGRS_
+    if not re.match(r'^CGRS_[A-Z0-9_]{2,30}$', code):
+        flash('Role code must start with CGRS_ followed by 2-30 uppercase letters/digits/underscores.', 'error')
+        return redirect(url_for('admin.access_control'))
+
+    result = auth_client.create_role(app_id, code, name, description)
+    if result.get('success'):
+        flash(f'Role "{name}" created successfully.', 'success')
+    else:
+        flash(f"Failed to create role: {result.get('message', 'Unknown error')}", 'error')
+    return redirect(url_for('admin.access_control'))
+
+
+# ── Page-based permission grouping helper ────────────────────────────────
+
+# Maps permission categories to page display info
+_PAGE_INFO = {
+    'DASHBOARD':     {'name': 'Dashboard',       'icon': 'bi-speedometer2',    'order': 1},
+    'FG_CODE':       {'name': 'FG Codes / SKU',  'icon': 'bi-box-seam',        'order': 2},
+    'MASTER_DATA':   {'name': 'Master Data',      'icon': 'bi-database',        'order': 3},
+    'TARGET_WEIGHT': {'name': 'Target Weight',    'icon': 'bi-bullseye',        'order': 4},
+    'PROCESS_ORDER': {'name': 'Process Orders',   'icon': 'bi-receipt',         'order': 5},
+    'NPL':           {'name': 'NPL',             'icon': 'bi-calculator',      'order': 6},
+    'QA':            {'name': 'QA',              'icon': 'bi-patch-check',     'order': 7},
+    'OPTIMIZER':     {'name': 'Optimizer',        'icon': 'bi-sliders',         'order': 8},
+    'BATCH':         {'name': 'Batch',           'icon': 'bi-collection',      'order': 9},
+    'REPORT':        {'name': 'Reports',         'icon': 'bi-bar-chart-line',  'order': 10},
+    'PRODUCT_DEV':   {'name': 'Product Dev',     'icon': 'bi-flask',           'order': 11},
+    'ADMIN':         {'name': 'Admin',           'icon': 'bi-gear',            'order': 12},
+    'AUDIT_LOG':     {'name': 'Audit Log',       'icon': 'bi-clock-history',   'order': 13},
+}
+
+# Standard CRUD operations
+_CRUD_OPS = {'VIEW', 'CREATE', 'EDIT', 'UPDATE', 'DELETE'}
+
+
+def _organize_permissions_by_page(all_perms, assigned_ids):
+    """Organize permissions by page, splitting CRUD and special operations.
+
+    Returns a list of page dicts sorted by display order:
+    [
+        {
+            'category': 'FG_CODE',
+            'name': 'FG Codes / SKU',
+            'icon': 'bi-box-seam',
+            'order': 2,
+            'crud': [{'id': ..., 'code': ..., 'op': 'VIEW', 'assigned': True}, ...],
+            'special': [{'id': ..., 'code': ..., 'op': 'EXPORT', 'assigned': False}, ...],
+        },
+        ...
+    ]
+    """
+    pages = {}
+    for p in all_perms:
+        cat = p.get('category', 'OTHER')
+        parts = p.get('code', '').split('.', 1)
+        op = parts[1] if len(parts) > 1 else parts[0]
+
+        if cat not in pages:
+            info = _PAGE_INFO.get(cat, {'name': cat.replace('_', ' ').title(), 'icon': 'bi-folder', 'order': 99})
+            pages[cat] = {
+                'category': cat,
+                'name': info['name'],
+                'icon': info['icon'],
+                'order': info['order'],
+                'crud': [],
+                'special': [],
+            }
+
+        perm_entry = {
+            'id': p['id'],
+            'code': p.get('code', ''),
+            'name': p.get('name', ''),
+            'op': op,
+            'assigned': p['id'] in assigned_ids,
+        }
+        if op in _CRUD_OPS:
+            pages[cat]['crud'].append(perm_entry)
+        else:
+            pages[cat]['special'].append(perm_entry)
+
+    return sorted(pages.values(), key=lambda x: x['order'])
+
+
 @bp.route('/access-control/roles/<role_id>')
 @require_auth
 @require_permission(Permissions.ADMIN_USERS)
 def role_detail(role_id):
-    """HTMX partial – role permissions with toggle checkboxes."""
+    """HTMX partial – role permissions organized by page with CRUD + special."""
     app_id = _auth_ctx()
     role_perms = auth_client.get_role_permissions(role_id)
     all_perms = auth_client.get_all_permissions(application_id=app_id)
     assigned_ids = {p['id'] for p in role_perms}
-    # Group by category
-    categories = {}
-    for p in all_perms:
-        cat = p.get('category', 'Other')
-        categories.setdefault(cat, []).append({**p, 'assigned': p['id'] in assigned_ids})
+    # Organize by page with CRUD + special split
+    pages = _organize_permissions_by_page(all_perms, assigned_ids)
+    # Find role name for display
+    all_roles = auth_client.get_app_roles(app_id)
+    role_name = next((r['name'] for r in all_roles if r['id'] == role_id), 'Role')
     return render_template('admin/partials/role_permissions_modal.html',
                            role_id=role_id,
-                           categories=categories,
-                           assigned_ids=assigned_ids)
+                           role_name=role_name,
+                           pages=pages)
 
 
 @bp.route('/access-control/roles/<role_id>/permissions', methods=['POST'])

@@ -1,23 +1,99 @@
-{# HTMX partial – Role permission assignment modal #}
+{# HTMX partial – Role permission assignment modal (page-based layout) #}
 <div class="modal-header">
-    <h5 class="modal-title"><i class="bi bi-key me-2"></i>Role Permissions</h5>
+    <h5 class="modal-title"><i class="bi bi-key me-2"></i>{{ role_name }} — Permissions</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <form method="POST" action="{{ url_for('admin.update_role_permissions', role_id=role_id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
-        <p class="text-muted small mb-3">Check the permissions this role should have.</p>
-        {% for category, perms in categories.items() %}
-        <h6 class="border-bottom pb-1 mb-2 mt-3">{{ category }}</h6>
-        {% for p in perms %}
-        <div class="form-check mb-1">
-            <input class="form-check-input" type="checkbox" name="permission_ids" value="{{ p.id }}"
-                id="perm_{{ p.id }}" {% if p.assigned %}checked{% endif %}>
-            <label class="form-check-label" for="perm_{{ p.id }}">
-                {{ p.name }} <code class="ms-1 small text-muted">{{ p.code }}</code>
-            </label>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+        <p class="text-muted small mb-3">
+            Assign permissions per page. <strong>CRUD</strong> = standard operations,
+            <strong>Special</strong> = page-specific actions.
+        </p>
+
+        {% for page in pages %}
+        <div class="card mb-2 border-0 shadow-sm">
+            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center"
+                data-bs-toggle="collapse" data-bs-target="#page-{{ page.category }}" role="button"
+                style="cursor:pointer;">
+                <span>
+                    <i class="{{ page.icon }} me-2 text-primary"></i>
+                    <strong>{{ page.name }}</strong>
+                    <span class="badge bg-primary-subtle text-primary ms-2" id="count-{{ page.category }}">
+                        {% set ns = namespace(count=0) %}
+                        {% for p in page.crud %}{% if p.assigned %}{% set ns.count = ns.count + 1 %}{% endif %}{% endfor
+                        %}
+                        {% for p in page.special %}{% if p.assigned %}{% set ns.count = ns.count + 1 %}{% endif %}{%
+                        endfor %}
+                        {{ ns.count }}/{{ page.crud|length + page.special|length }}
+                    </span>
+                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1"
+                        onclick="event.stopPropagation(); togglePagePerms('{{ page.category }}', true);"
+                        title="Select all">
+                        <i class="bi bi-check-all"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1"
+                        onclick="event.stopPropagation(); togglePagePerms('{{ page.category }}', false);"
+                        title="Clear all">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="page-{{ page.category }}">
+                <div class="card-body py-2 px-3">
+                    {# ── CRUD Operations ── #}
+                    {% if page.crud %}
+                    <div class="mb-2">
+                        <small class="text-uppercase fw-bold text-muted d-block mb-1">
+                            <i class="bi bi-pencil-square me-1"></i>CRUD Operations
+                        </small>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for p in page.crud %}
+                            <div class="form-check">
+                                <input class="form-check-input perm-cb perm-{{ page.category }}" type="checkbox"
+                                    name="permission_ids" value="{{ p.id }}" id="perm_{{ p.id }}" {% if p.assigned
+                                    %}checked{% endif %}>
+                                <label class="form-check-label" for="perm_{{ p.id }}">
+                                    <span
+                                        class="badge {% if p.op == 'VIEW' %}bg-info-subtle text-info{% elif p.op == 'CREATE' %}bg-success-subtle text-success{% elif p.op in ('EDIT', 'UPDATE') %}bg-warning-subtle text-warning{% elif p.op == 'DELETE' %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-secondary{% endif %} me-1">
+                                        {{ p.op }}
+                                    </span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {# ── Special Access ── #}
+                    {% if page.special %}
+                    <div>
+                        <small class="text-uppercase fw-bold text-muted d-block mb-1">
+                            <i class="bi bi-lightning me-1"></i>Special Access
+                        </small>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for p in page.special %}
+                            <div class="form-check">
+                                <input class="form-check-input perm-cb perm-{{ page.category }}" type="checkbox"
+                                    name="permission_ids" value="{{ p.id }}" id="perm_{{ p.id }}" {% if p.assigned
+                                    %}checked{% endif %}>
+                                <label class="form-check-label" for="perm_{{ p.id }}">
+                                    <span class="badge bg-purple-subtle text-purple me-1"
+                                        style="background-color:#f3e8ff!important;color:#7c3aed!important;">
+                                        {{ p.op }}
+                                    </span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        {% endfor %}
         {% endfor %}
     </div>
     <div class="modal-footer">
@@ -25,3 +101,10 @@
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Permissions</button>
     </div>
 </form>
+<script>
+    function togglePagePerms(category, checked) {
+        document.querySelectorAll('.perm-' + category).forEach(function (cb) {
+            cb.checked = checked;
+        });
+    }
+</script>

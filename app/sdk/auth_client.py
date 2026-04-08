@@ -269,3 +269,32 @@ def sync_permissions_to_auth(application_id, permissions):
     else:
         logger.warning("sync_permissions_to_auth failed: %s", result.get('message'))
     return result
+
+
+def create_role(application_id, code, name, description='', scope_type='APPLICATION'):
+    """Create a new role via the sync endpoint (single-role push).
+    Returns the result dict with the new role ID on success.
+    """
+    role_data = {
+        'code': code,
+        'name': name,
+        'description': description,
+        'scope_type': scope_type,
+    }
+    result = _api_request('POST', '/api/sync/roles', data={
+        'application_id': application_id,
+        'roles': [role_data],
+    })
+    if result.get('success'):
+        created = result.get('data', {}).get('created', [])
+        if created:
+            return {'success': True, 'role_id': created[0].get('id'), 'code': code}
+        # Role may already exist (returned in skipped/updated)
+        updated = result.get('data', {}).get('updated', [])
+        skipped = result.get('data', {}).get('skipped', [])
+        if updated:
+            return {'success': True, 'role_id': updated[0].get('id'), 'code': code, 'note': 'updated'}
+        if skipped:
+            reason = skipped[0].get('reason', 'Already exists')
+            return {'success': False, 'message': f'Role not created: {reason}'}
+    return {'success': False, 'message': result.get('message', 'Failed to create role')}
