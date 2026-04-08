@@ -44,8 +44,10 @@
                         <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at }}</td>
                         <td>{{ r.created_by or '—' }}</td>
                         <td>
+                            {% if has_perm('REPORT.DOWNLOAD') %}
                             <a href="{{ url_for('reports.download', report_id=r.id) }}"
                                 class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> Download</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

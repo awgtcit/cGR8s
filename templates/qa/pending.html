@@ -34,8 +34,12 @@
                         <td>{{ po.process_order_number }}</td>
                         <td>{{ po.fg_code_id }}</td>
                         <td>{{ status_badge(po.status) }}</td>
-                        <td><a href="{{ url_for('qa.enter', process_order_id=po.id) }}"
-                                class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i> Enter QA</a></td>
+                        <td>
+                            {% if has_perm('QA.ENTER') %}
+                            <a href="{{ url_for('qa.enter', process_order_id=po.id) }}"
+                                class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i> Enter QA</a>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
