@@ -72,23 +72,35 @@
             </div>
             <div class="card-body">
                 <div class="quick-actions-grid">
+                    {% if has_perm('PROCESS_ORDER.CREATE') %}
                     <a href="{{ url_for('process_orders.create') }}" class="quick-action-item">
                         <div class="quick-action-icon bg-primary-soft"><i class="bi bi-plus-lg"></i></div>
                         <span>New Process Order</span>
                     </a>
+                    {% endif %}
+                    {% if has_perm('FG_CODE.CREATE') %}
                     <a href="{{ url_for('fg_codes.create') }}" class="quick-action-item">
                         <div class="quick-action-icon bg-secondary-soft"><i class="bi bi-upc-scan"></i></div>
                         <span>New FG Code</span>
                     </a>
+                    {% endif %}
+                    {% if has_perm('BATCH.SUBMIT') %}
                     <a href="{{ url_for('batch.submit') }}" class="quick-action-item">
                         <div class="quick-action-icon bg-warning-soft"><i class="bi bi-stack"></i></div>
                         <span>Batch Processing</span>
                     </a>
+                    {% endif %}
+                    {% if has_perm('REPORT.GENERATE') %}
                     <a href="{{ url_for('reports.generate') }}" class="quick-action-item">
                         <div class="quick-action-icon bg-info-soft"><i class="bi bi-file-earmark-pdf"></i></div>
                         <span>Generate Report</span>
                     </a>
+                    {% endif %}
                 </div>
+                {% if not (has_perm('PROCESS_ORDER.CREATE') or has_perm('FG_CODE.CREATE') or has_perm('BATCH.SUBMIT') or
+                has_perm('REPORT.GENERATE')) %}
+                <p class="text-muted text-center mb-0 py-3">No quick actions available for your role.</p>
+                {% endif %}
             </div>
         </div>
     </div>

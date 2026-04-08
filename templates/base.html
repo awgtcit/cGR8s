@@ -183,7 +183,8 @@
                     {% endif %}
 
                     {# ── OPERATIONS section ────────────────────────────── #}
-                    {% set show_operations = has_perm('BATCH.VIEW') or has_perm('REPORT.VIEW') %}
+                    {% set show_operations = has_perm('BATCH.VIEW') or has_perm('REPORT.VIEW') or
+                    has_perm('REPORT.GENERATE') %}
                     {% if show_operations %}
                     <li class="nav-section">OPERATIONS</li>
                     {% endif %}
@@ -196,7 +197,7 @@
                         </a>
                     </li>
                     {% endif %}
-                    {% if has_perm('REPORT.VIEW') %}
+                    {% if has_perm('REPORT.VIEW') or has_perm('REPORT.GENERATE') %}
                     <li class="nav-item">
                         <a class="nav-link nav-sub-toggle {% if request.blueprint == 'reports' %}active{% endif %}"
                             data-bs-toggle="collapse" data-bs-target="#reportsSub"
@@ -208,14 +209,18 @@
                         </a>
                         <div class="collapse {% if request.blueprint == 'reports' %}show{% endif %}" id="reportsSub">
                             <ul class="nav flex-column sub-nav">
+                                {% if has_perm('REPORT.VIEW') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'reports.index' %}active{% endif %}"
                                         href="{{ url_for('reports.index') }}"><i class="bi bi-list-ul"></i><span>All
                                             Reports</span></a></li>
+                                {% endif %}
+                                {% if has_perm('REPORT.GENERATE') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'reports.natural_loss' %}active{% endif %}"
                                         href="{{ url_for('reports.natural_loss') }}"><i
                                             class="bi bi-bar-chart-line"></i><span>Natural Loss %</span></a></li>
+                                {% endif %}
                             </ul>
                         </div>
                     </li>
