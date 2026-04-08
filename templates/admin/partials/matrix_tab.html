@@ -25,7 +25,7 @@
                 </td>
                 {% for role in roles %}
                 <td>
-                    {% if p.id in matrix.get(role.id, set()) %}
+                    {% if p.id in matrix.get(role.id, []) %}
                     <i class="bi bi-check-circle-fill text-success"></i>
                     {% else %}
                     <i class="bi bi-dash text-muted"></i>

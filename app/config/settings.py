@@ -50,6 +50,7 @@ class BaseConfig:
     AUTH_APP_APPLICATION_ID = os.getenv('AUTH_APP_APPLICATION_ID', '')
 
     # ── Session ───────────────────────────────────────────────────────────
+    SESSION_COOKIE_NAME = 'cgr8s_session'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)

@@ -19,6 +19,12 @@ DEFAULT_PUBLIC_PATHS = frozenset([
     '/static', '/login', '/auth/callback',
 ])
 
+# Admin permissions auto-granted to SSO users flagged as admin in Auth-App
+_SSO_ADMIN_PERMISSIONS = [
+    'ADMIN.PANEL', 'ADMIN.SETTINGS', 'ADMIN.USERS',
+    'ADMIN.MASTERS', 'AUDIT_LOG.VIEW',
+]
+
 
 def init_sso_middleware(app, public_paths=None, login_url='/login'):
     """
@@ -46,6 +52,19 @@ def init_sso_middleware(app, public_paths=None, login_url='/login'):
                 session['sso_authenticated'] = True
                 session['sso_perm_ts'] = time.time()
                 session.permanent = True
+
+                # Auth-App is the SSO authority – if the user is flagged
+                # as admin there, auto-grant all cGR8s admin permissions
+                # so the embed admin page works without separate seeding.
+                _is_admin = user_info['user'].get('is_admin')
+                logger.info("SSO auto-grant check: is_admin=%r, perms_before=%s",
+                            _is_admin, session['sso_permissions'])
+                if _is_admin:
+                    for p in _SSO_ADMIN_PERMISSIONS:
+                        if p not in session['sso_permissions']:
+                            session['sso_permissions'].append(p)
+                    logger.info("SSO auto-granted admin perms: %s", session['sso_permissions'])
+
                 logger.info("SSO login: %s", user_info['user'].get('email'))
 
                 g.current_user = user_info['user']
@@ -72,9 +91,8 @@ def init_sso_middleware(app, public_paths=None, login_url='/login'):
                     from app.sdk.auth_client import refresh_session_permissions
                     user_id = session.get('sso_user', {}).get('id')
                     app_id = app.config.get('AUTH_APP_APPLICATION_ID', '')
-                    token = session.get('sso_token')
                     if user_id and app_id:
-                        fresh = refresh_session_permissions(user_id, app_id, token=token)
+                        fresh = refresh_session_permissions(user_id, app_id)
                         if fresh:
                             session['sso_permissions'] = fresh
                             session['sso_perm_ts'] = time.time()

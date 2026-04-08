@@ -5,7 +5,9 @@
         <thead>
             <tr>
                 <th>User</th>
+                <th>Email</th>
                 <th>Roles</th>
+                <th>Status</th>
                 <th class="text-end">Actions</th>
             </tr>
         </thead>
@@ -13,11 +15,20 @@
             {% for u in users %}
             <tr>
                 <td>
-                    <div class="fw-semibold">{{ u.get('user_id', u.get('id', '—')) }}</div>
+                    <div class="fw-semibold">{{ u.get('first_name', '') }} {{ u.get('last_name', '') }}</div>
+                    <small class="text-muted">{{ u.get('login_id', u.get('user_id', u.get('id', '—'))) }}</small>
                 </td>
+                <td><span class="text-muted">{{ u.get('email', '—') }}</span></td>
                 <td hx-get="{{ url_for('admin.user_roles_badges', user_id=u.get('user_id', u.get('id'))) }}"
                     hx-trigger="load" hx-swap="innerHTML">
                     <span class="spinner-border spinner-border-sm text-muted"></span>
+                </td>
+                <td>
+                    {% if u.get('is_active', True) %}
+                    <span class="badge bg-success-subtle text-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                    {% endif %}
                 </td>
                 <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary"

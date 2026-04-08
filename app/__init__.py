@@ -17,19 +17,19 @@ logger = logging.getLogger(__name__)
 
 # ── Admin Pages for Auth Platform Sync ────────────────────────────────────
 ADMIN_PAGES = [
-    {'page_code': 'CGRS_DASH',       'page_name': 'Dashboard',        'page_url': '/',               'icon': 'dashboard',      'display_order': 1},
-    {'page_code': 'CGRS_FG',         'page_name': 'FG Codes',         'page_url': '/fg-codes',       'icon': 'inventory_2',    'display_order': 2},
-    {'page_code': 'CGRS_MASTER',     'page_name': 'Master Data',      'page_url': '/master-data',    'icon': 'dataset',        'display_order': 3},
-    {'page_code': 'CGRS_TW',         'page_name': 'Target Weight',    'page_url': '/target-weight',  'icon': 'scale',          'display_order': 4},
-    {'page_code': 'CGRS_PO',         'page_name': 'Process Orders',   'page_url': '/process-orders', 'icon': 'receipt_long',   'display_order': 5},
-    {'page_code': 'CGRS_NPL',        'page_name': 'NPL',             'page_url': '/npl',            'icon': 'calculate',      'display_order': 6},
-    {'page_code': 'CGRS_QA',         'page_name': 'QA',              'page_url': '/qa',             'icon': 'verified',       'display_order': 7},
-    {'page_code': 'CGRS_OPT',        'page_name': 'Optimizer',        'page_url': '/optimizer',      'icon': 'tune',           'display_order': 8},
-    {'page_code': 'CGRS_BATCH',      'page_name': 'Batch',           'page_url': '/batch',          'icon': 'pending_actions', 'display_order': 9},
-    {'page_code': 'CGRS_RPT',        'page_name': 'Reports',         'page_url': '/reports',        'icon': 'assessment',     'display_order': 10},
-    {'page_code': 'CGRS_PDEV',       'page_name': 'Product Dev',     'page_url': '/product-dev',    'icon': 'science',        'display_order': 11},
-    {'page_code': 'CGRS_ADMIN',      'page_name': 'Admin',           'page_url': '/admin',          'icon': 'admin_panel_settings', 'display_order': 12},
-    {'page_code': 'CGRS_AUDIT',      'page_name': 'Audit Log',       'page_url': '/admin/audit',    'icon': 'history',        'display_order': 13},
+    {'page_code': 'CGRS_DASH',       'page_name': 'Dashboard',        'page_url': '/',               'icon': 'dashboard',            'display_order': 1,  'category': 'DASHBOARD'},
+    {'page_code': 'CGRS_FG',         'page_name': 'FG Codes',         'page_url': '/fg-codes',       'icon': 'inventory_2',          'display_order': 2,  'category': 'DATA MANAGEMENT'},
+    {'page_code': 'CGRS_MASTER',     'page_name': 'Master Data',      'page_url': '/master-data',    'icon': 'dataset',              'display_order': 3,  'category': 'DATA MANAGEMENT'},
+    {'page_code': 'CGRS_TW',         'page_name': 'Target Weight',    'page_url': '/target-weight',  'icon': 'scale',                'display_order': 4,  'category': 'PRODUCTION'},
+    {'page_code': 'CGRS_PO',         'page_name': 'Process Orders',   'page_url': '/process-orders', 'icon': 'receipt_long',         'display_order': 5,  'category': 'PRODUCTION'},
+    {'page_code': 'CGRS_NPL',        'page_name': 'NPL',             'page_url': '/npl',            'icon': 'calculate',            'display_order': 6,  'category': 'PRODUCTION'},
+    {'page_code': 'CGRS_QA',         'page_name': 'QA',              'page_url': '/qa',             'icon': 'verified',             'display_order': 7,  'category': 'PRODUCTION'},
+    {'page_code': 'CGRS_OPT',        'page_name': 'Optimizer',        'page_url': '/optimizer',      'icon': 'tune',                 'display_order': 8,  'category': 'PRODUCTION'},
+    {'page_code': 'CGRS_BATCH',      'page_name': 'Batch',           'page_url': '/batch',          'icon': 'pending_actions',      'display_order': 9,  'category': 'OPERATIONS'},
+    {'page_code': 'CGRS_RPT',        'page_name': 'Reports',         'page_url': '/reports',        'icon': 'assessment',           'display_order': 10, 'category': 'OPERATIONS'},
+    {'page_code': 'CGRS_PDEV',       'page_name': 'Product Dev',     'page_url': '/product-dev',    'icon': 'science',              'display_order': 11, 'category': 'OPERATIONS'},
+    {'page_code': 'CGRS_ADMIN',      'page_name': 'Admin',           'page_url': '/admin',          'icon': 'admin_panel_settings', 'display_order': 12, 'category': 'SYSTEM'},
+    {'page_code': 'CGRS_AUDIT',      'page_name': 'Audit Log',       'page_url': '/admin/audit',    'icon': 'history',              'display_order': 13, 'category': 'SYSTEM'},
 ]
 
 
@@ -80,6 +80,12 @@ def create_app(config_name: str = None) -> Flask:
     if app_id:
         from app.sdk.app_registry_sync import sync_pages_on_startup
         sync_pages_on_startup(app, app_id, ADMIN_PAGES)
+
+    # ── Integration Framework Sync ────────────────────────────────────
+    if app_id:
+        from app.config.constants import Permissions
+        from app.sdk.integration_sync import register_sync_on_startup
+        register_sync_on_startup(app, ADMIN_PAGES, Permissions)
 
     # ── Jinja2 Globals / Filters ──────────────────────────────────────
     def _has_perm(code):

@@ -182,10 +182,8 @@ def audit_trail():
 # ── Helper: app_id + token from config / session ─────────────────────────
 
 def _auth_ctx():
-    """Return (application_id, sso_token) for Auth-App API calls."""
-    app_id = current_app.config.get('AUTH_APP_APPLICATION_ID', '')
-    token = session.get('sso_token')
-    return app_id, token
+    """Return the application_id for Auth-App API calls."""
+    return current_app.config.get('AUTH_APP_APPLICATION_ID', '')
 
 
 # ── Access Control ────────────────────────────────────────────────────────
@@ -195,7 +193,12 @@ def _auth_ctx():
 @require_permission(Permissions.ADMIN_USERS)
 def access_control():
     """Main Access Control page with Users / Roles / Matrix tabs."""
-    return render_template('admin/access_control.html')
+    embed = request.args.get('embed') == '1'
+    return render_template(
+        'admin/access_control.html',
+        base_template='base_embed.html' if embed else 'base.html',
+        embed_mode=embed,
+    )
 
 
 @bp.route('/access-control/users')
@@ -203,9 +206,9 @@ def access_control():
 @require_permission(Permissions.ADMIN_USERS)
 def access_control_users():
     """HTMX partial – list application users with their role badges."""
-    app_id, token = _auth_ctx()
+    app_id = _auth_ctx()
     page = request.args.get('page', 1, type=int)
-    users, meta = auth_client.get_app_users(app_id, page=page, per_page=30, token=token)
+    users, meta = auth_client.get_app_users(app_id, page=page, per_page=30)
     if users is None:
         return render_template('admin/partials/error_partial.html',
                                message='Failed to load users from Auth platform.')
@@ -219,7 +222,7 @@ def access_control_users():
 @require_permission(Permissions.ADMIN_USERS)
 def user_roles_detail(user_id):
     """HTMX partial – modal body showing user roles with toggle UI."""
-    app_id, _token = _auth_ctx()
+    app_id = _auth_ctx()
     user_roles = auth_client.get_user_roles(user_id, application_id=app_id)
     all_roles = auth_client.get_app_roles(app_id)
     assigned_codes = {r['role_code'] for r in user_roles}
@@ -235,7 +238,7 @@ def user_roles_detail(user_id):
 @require_permission(Permissions.ADMIN_USERS)
 def user_roles_badges(user_id):
     """HTMX partial – role badges for a single user row (lazy-loaded)."""
-    app_id, _token = _auth_ctx()
+    app_id = _auth_ctx()
     user_roles = auth_client.get_user_roles(user_id, application_id=app_id)
     badges = ''.join(
         f'<span class="badge bg-primary-subtle text-primary me-1">{r.get("role_name", r.get("role_code", ""))}</span>'
@@ -249,7 +252,7 @@ def user_roles_badges(user_id):
 @require_permission(Permissions.ADMIN_USERS)
 def update_user_roles(user_id):
     """Sync the selected role codes for a user via Auth-App."""
-    app_id, _token = _auth_ctx()
+    app_id = _auth_ctx()
     role_codes = request.form.getlist('role_codes')
     result = auth_client.sync_user_roles(user_id, app_id, role_codes)
     if result.get('success'):
@@ -264,7 +267,7 @@ def update_user_roles(user_id):
 @require_permission(Permissions.ADMIN_USERS)
 def access_control_roles():
     """HTMX partial – list application roles."""
-    app_id, _token = _auth_ctx()
+    app_id = _auth_ctx()
     roles = auth_client.get_app_roles(app_id)
     return render_template('admin/partials/roles_tab.html', roles=roles)
 
@@ -274,9 +277,9 @@ def access_control_roles():
 @require_permission(Permissions.ADMIN_USERS)
 def role_detail(role_id):
     """HTMX partial – role permissions with toggle checkboxes."""
-    app_id, token = _auth_ctx()
-    role_perms = auth_client.get_role_permissions(role_id, token=token)
-    all_perms = auth_client.get_all_permissions(application_id=app_id, token=token)
+    app_id = _auth_ctx()
+    role_perms = auth_client.get_role_permissions(role_id)
+    all_perms = auth_client.get_all_permissions(application_id=app_id)
     assigned_ids = {p['id'] for p in role_perms}
     # Group by category
     categories = {}
@@ -293,10 +296,10 @@ def role_detail(role_id):
 @require_auth
 @require_permission(Permissions.ADMIN_USERS)
 def update_role_permissions(role_id):
-    """Sync permissions for a role (add selected, full selection replaces)."""
-    app_id, token = _auth_ctx()
+    """Sync permissions for a role (full replace via sync endpoint)."""
+    app_id = _auth_ctx()
     permission_ids = request.form.getlist('permission_ids')
-    result = auth_client.map_role_permissions(role_id, permission_ids, token=token)
+    result = auth_client.map_role_permissions(role_id, permission_ids, application_id=app_id)
     if result.get('success'):
         flash('Role permissions updated.', 'success')
     else:
@@ -309,15 +312,15 @@ def update_role_permissions(role_id):
 @require_permission(Permissions.ADMIN_USERS)
 def access_control_matrix():
     """HTMX partial – permission matrix (roles × permissions)."""
-    app_id, token = _auth_ctx()
+    app_id = _auth_ctx()
     roles = auth_client.get_app_roles(app_id)
-    all_perms = auth_client.get_all_permissions(application_id=app_id, token=token)
+    all_perms = auth_client.get_all_permissions(application_id=app_id)
 
     # Build matrix: for each role, get assigned permission IDs
     matrix = {}
     for role in roles:
-        rp = auth_client.get_role_permissions(role['id'], token=token)
-        matrix[role['id']] = {p['id'] for p in rp}
+        rp = auth_client.get_role_permissions(role['id'])
+        matrix[role['id']] = [p['id'] for p in rp]
 
     # Group permissions by category
     categories = {}
@@ -334,11 +337,11 @@ def access_control_matrix():
 @require_permission(Permissions.ADMIN_PANEL)
 def refresh_session():
     """Re-fetch current user's permissions from Auth-App and update session."""
-    app_id, token = _auth_ctx()
+    app_id = _auth_ctx()
     user_id = session.get('sso_user', {}).get('id')
     if not user_id:
         return jsonify({'success': False, 'message': 'No user in session'}), 400
-    fresh_perms = auth_client.refresh_session_permissions(user_id, app_id, token=token)
+    fresh_perms = auth_client.refresh_session_permissions(user_id, app_id)
     if fresh_perms:
         session['sso_permissions'] = fresh_perms
         return jsonify({'success': True, 'message': 'Permissions refreshed', 'count': len(fresh_perms)})

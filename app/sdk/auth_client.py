@@ -168,37 +168,38 @@ def get_app_roles(application_id):
     return []
 
 
-def get_all_permissions(application_id=None, token=None):
-    """List every permission registered in Auth-App (JWT auth)."""
+def get_all_permissions(application_id=None):
+    """List every permission registered in Auth-App (API-key auth)."""
     params = f'?application_id={application_id}' if application_id else ''
-    result = _api_request('GET', f'/api/permissions{params}', token=token)
+    result = _api_request('GET', f'/api/permissions{params}')
     if result.get('success'):
         return result.get('data', [])
     logger.warning("get_all_permissions failed: %s", result.get('message'))
     return []
 
 
-def get_role_permissions(role_id, token=None):
-    """Get permissions mapped to a specific role (JWT auth)."""
-    result = _api_request('GET', f'/api/roles/{role_id}/permissions', token=token)
+def get_role_permissions(role_id):
+    """Get permissions mapped to a specific role (API-key auth)."""
+    result = _api_request('GET', f'/api/roles/{role_id}/permissions')
     if result.get('success'):
         return result.get('data', [])
     logger.warning("get_role_permissions failed: %s", result.get('message'))
     return []
 
 
-def map_role_permissions(role_id, permission_ids, token=None):
-    """Add permissions to a role (JWT auth, ADD-only batch)."""
-    result = _api_request('POST', f'/api/roles/{role_id}/permissions',
-                          data={'permission_ids': permission_ids}, token=token)
+def map_role_permissions(role_id, permission_ids, application_id=None):
+    """Full-replace permissions for a role (API-key auth via sync endpoint)."""
+    result = _api_request('PUT', f'/api/sync/roles/{role_id}/permissions',
+                          data={'application_id': application_id,
+                                'permission_ids': permission_ids})
     return result
 
 
-def get_app_users(application_id, page=1, per_page=50, token=None):
-    """List users assigned to this application (JWT auth).
+def get_app_users(application_id, page=1, per_page=50):
+    """List users assigned to this application (API-key auth).
     Returns (list, meta_dict) on success, (None, None) on failure."""
     params = f'?page={int(page)}&per_page={int(per_page)}'
-    result = _api_request('GET', f'/api/applications/{application_id}/users{params}', token=token)
+    result = _api_request('GET', f'/api/applications/{application_id}/users{params}')
     if result.get('success'):
         return result.get('data', []), result.get('meta', {})
     logger.warning("get_app_users failed: %s", result.get('message'))
@@ -224,17 +225,47 @@ def sync_user_roles(user_id, application_id, role_codes):
     return result
 
 
-def get_effective_permissions(user_id, application_id, token=None):
-    """Resolve effective permission codes for a user (JWT auth)."""
+def get_effective_permissions(user_id, application_id):
+    """Resolve effective permission codes for a user (API-key auth)."""
     params = f'?application_id={application_id}'
-    result = _api_request('GET', f'/api/users/{user_id}/permissions{params}', token=token)
+    result = _api_request('GET', f'/api/users/{user_id}/permissions{params}')
     if result.get('success'):
         return result.get('data', [])
     logger.warning("get_effective_permissions failed: %s", result.get('message'))
     return []
 
 
-def refresh_session_permissions(user_id, application_id, token=None):
+def refresh_session_permissions(user_id, application_id):
     """Fetch fresh permissions from Auth-App and return them as a list of codes."""
-    perms = get_effective_permissions(user_id, application_id, token=token)
+    perms = get_effective_permissions(user_id, application_id)
     return [p['code'] if isinstance(p, dict) else p for p in perms]
+
+
+def sync_roles_to_auth(application_id, roles):
+    """Push role definitions to Auth-App via sync endpoint.
+    roles: list of dicts with at least 'code' and 'name'.
+    """
+    result = _api_request('POST', '/api/sync/roles', data={
+        'application_id': application_id,
+        'roles': roles,
+    })
+    if result.get('success'):
+        logger.info("sync_roles_to_auth: %s", result.get('data', {}).get('summary', {}))
+    else:
+        logger.warning("sync_roles_to_auth failed: %s", result.get('message'))
+    return result
+
+
+def sync_permissions_to_auth(application_id, permissions):
+    """Push permission definitions to Auth-App via sync endpoint.
+    permissions: list of dicts with at least 'code' and 'name'.
+    """
+    result = _api_request('POST', '/api/sync/permissions', data={
+        'application_id': application_id,
+        'permissions': permissions,
+    })
+    if result.get('success'):
+        logger.info("sync_permissions_to_auth: %s", result.get('data', {}).get('summary', {}))
+    else:
+        logger.warning("sync_permissions_to_auth failed: %s", result.get('message'))
+    return result
