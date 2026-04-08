@@ -252,13 +252,19 @@
 <div class="page-header">
     <h2><i class="bi bi-clipboard-data"></i> {{ po.process_order_number }}</h2>
     <div class="detail-actions">
+        {% if has_perm('PROCESS_ORDER.EDIT') %}
         <a href="{{ url_for('process_orders.edit', id=po.id) }}" class="btn btn-outline-primary btn-sm"><i
                 class="bi bi-pencil"></i> Edit</a>
+        {% endif %}
+        {% if has_perm('TARGET_WEIGHT.CALCULATE') %}
         <a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}" class="btn btn-success btn-sm"><i
                 class="bi bi-calculator"></i> Calculate</a>
+        {% endif %}
+        {% if has_perm('PROCESS_ORDER.DELETE') %}
         {{ delete_button(url_for('process_orders.delete', id=po.id), csrf_token(),
         'This will permanently delete the Process Order and ALL related data (Target Weight, NPL, QA, Optimizer,
         Reports). Continue?') }}
+        {% endif %}
     </div>
 </div>
 

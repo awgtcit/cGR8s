@@ -13,8 +13,10 @@
 <div class="page-header d-flex justify-content-between align-items-center">
     <h2><i class="bi bi-sliders"></i> Optimizer Result</h2>
     <div>
+        {% if has_perm('OPTIMIZER.RUN') %}
         <a href="{{ url_for('optimizer.run', process_order_id=run.process_order_id) }}"
             class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> Re-run</a>
+        {% endif %}
         <a href="{{ url_for('optimizer.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>
             Back</a>
     </div>

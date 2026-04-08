@@ -1,0 +1,44 @@
+{# HTMX partial – Roles list #}
+{% if roles %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Code</th>
+                <th>Scope</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in roles %}
+            <tr>
+                <td class="fw-semibold">{{ r.name }}</td>
+                <td><code>{{ r.code }}</code></td>
+                <td>{{ r.scope_type or '—' }}</td>
+                <td>
+                    {% if r.is_active %}
+                    <span class="badge bg-success-subtle text-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary"
+                        hx-get="{{ url_for('admin.role_detail', role_id=r.id) }}" hx-target="#acModalContent"
+                        hx-swap="innerHTML">
+                        <i class="bi bi-key me-1"></i> Permissions
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-person-badge fs-1"></i>
+    <p class="mt-2">No roles found for this application.</p>
+</div>
+{% endif %}

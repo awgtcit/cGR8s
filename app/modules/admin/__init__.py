@@ -6,11 +6,12 @@ import urllib.request
 import urllib.error
 from urllib.parse import urlparse
 
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, g
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, g, session, current_app
 from app.auth.decorators import require_auth, require_permission
 from app.config.constants import Permissions
 from app.repositories import SystemConfigRepository, AuditLogRepository
 from app.utils.helpers import paginate_args
+from app.sdk import auth_client
 
 bp = Blueprint('admin', __name__, template_folder='templates')
 logger = logging.getLogger(__name__)
@@ -176,3 +177,169 @@ def audit_trail():
                            page=result.get('page', 1),
                            total_pages=result.get('total_pages', 1),
                            actions=actions)
+
+
+# ── Helper: app_id + token from config / session ─────────────────────────
+
+def _auth_ctx():
+    """Return (application_id, sso_token) for Auth-App API calls."""
+    app_id = current_app.config.get('AUTH_APP_APPLICATION_ID', '')
+    token = session.get('sso_token')
+    return app_id, token
+
+
+# ── Access Control ────────────────────────────────────────────────────────
+
+@bp.route('/access-control')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def access_control():
+    """Main Access Control page with Users / Roles / Matrix tabs."""
+    return render_template('admin/access_control.html')
+
+
+@bp.route('/access-control/users')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def access_control_users():
+    """HTMX partial – list application users with their role badges."""
+    app_id, token = _auth_ctx()
+    page = request.args.get('page', 1, type=int)
+    users, meta = auth_client.get_app_users(app_id, page=page, per_page=30, token=token)
+    if users is None:
+        return render_template('admin/partials/error_partial.html',
+                               message='Failed to load users from Auth platform.')
+
+    return render_template('admin/partials/users_tab.html',
+                           users=users, meta=meta, page=page)
+
+
+@bp.route('/access-control/users/<user_id>/roles')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def user_roles_detail(user_id):
+    """HTMX partial – modal body showing user roles with toggle UI."""
+    app_id, _token = _auth_ctx()
+    user_roles = auth_client.get_user_roles(user_id, application_id=app_id)
+    all_roles = auth_client.get_app_roles(app_id)
+    assigned_codes = {r['role_code'] for r in user_roles}
+    return render_template('admin/partials/user_roles_modal.html',
+                           user_id=user_id,
+                           user_roles=user_roles,
+                           all_roles=all_roles,
+                           assigned_codes=assigned_codes)
+
+
+@bp.route('/access-control/users/<user_id>/roles-badges')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def user_roles_badges(user_id):
+    """HTMX partial – role badges for a single user row (lazy-loaded)."""
+    app_id, _token = _auth_ctx()
+    user_roles = auth_client.get_user_roles(user_id, application_id=app_id)
+    badges = ''.join(
+        f'<span class="badge bg-primary-subtle text-primary me-1">{r.get("role_name", r.get("role_code", ""))}</span>'
+        for r in user_roles
+    )
+    return badges or '<span class="text-muted small">No roles</span>'
+
+
+@bp.route('/access-control/users/<user_id>/roles', methods=['POST'])
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def update_user_roles(user_id):
+    """Sync the selected role codes for a user via Auth-App."""
+    app_id, _token = _auth_ctx()
+    role_codes = request.form.getlist('role_codes')
+    result = auth_client.sync_user_roles(user_id, app_id, role_codes)
+    if result.get('success'):
+        flash('User roles updated.', 'success')
+    else:
+        flash(f"Failed to update roles: {result.get('message', 'Unknown error')}", 'error')
+    return redirect(url_for('admin.access_control'))
+
+
+@bp.route('/access-control/roles')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def access_control_roles():
+    """HTMX partial – list application roles."""
+    app_id, _token = _auth_ctx()
+    roles = auth_client.get_app_roles(app_id)
+    return render_template('admin/partials/roles_tab.html', roles=roles)
+
+
+@bp.route('/access-control/roles/<role_id>')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def role_detail(role_id):
+    """HTMX partial – role permissions with toggle checkboxes."""
+    app_id, token = _auth_ctx()
+    role_perms = auth_client.get_role_permissions(role_id, token=token)
+    all_perms = auth_client.get_all_permissions(application_id=app_id, token=token)
+    assigned_ids = {p['id'] for p in role_perms}
+    # Group by category
+    categories = {}
+    for p in all_perms:
+        cat = p.get('category', 'Other')
+        categories.setdefault(cat, []).append({**p, 'assigned': p['id'] in assigned_ids})
+    return render_template('admin/partials/role_permissions_modal.html',
+                           role_id=role_id,
+                           categories=categories,
+                           assigned_ids=assigned_ids)
+
+
+@bp.route('/access-control/roles/<role_id>/permissions', methods=['POST'])
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def update_role_permissions(role_id):
+    """Sync permissions for a role (add selected, full selection replaces)."""
+    app_id, token = _auth_ctx()
+    permission_ids = request.form.getlist('permission_ids')
+    result = auth_client.map_role_permissions(role_id, permission_ids, token=token)
+    if result.get('success'):
+        flash('Role permissions updated.', 'success')
+    else:
+        flash(f"Failed to update permissions: {result.get('message', 'Unknown error')}", 'error')
+    return redirect(url_for('admin.access_control'))
+
+
+@bp.route('/access-control/matrix')
+@require_auth
+@require_permission(Permissions.ADMIN_USERS)
+def access_control_matrix():
+    """HTMX partial – permission matrix (roles × permissions)."""
+    app_id, token = _auth_ctx()
+    roles = auth_client.get_app_roles(app_id)
+    all_perms = auth_client.get_all_permissions(application_id=app_id, token=token)
+
+    # Build matrix: for each role, get assigned permission IDs
+    matrix = {}
+    for role in roles:
+        rp = auth_client.get_role_permissions(role['id'], token=token)
+        matrix[role['id']] = {p['id'] for p in rp}
+
+    # Group permissions by category
+    categories = {}
+    for p in all_perms:
+        cat = p.get('category', 'Other')
+        categories.setdefault(cat, []).append(p)
+
+    return render_template('admin/partials/matrix_tab.html',
+                           roles=roles, categories=categories, matrix=matrix)
+
+
+@bp.route('/access-control/refresh-session', methods=['POST'])
+@require_auth
+@require_permission(Permissions.ADMIN_PANEL)
+def refresh_session():
+    """Re-fetch current user's permissions from Auth-App and update session."""
+    app_id, token = _auth_ctx()
+    user_id = session.get('sso_user', {}).get('id')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'No user in session'}), 400
+    fresh_perms = auth_client.refresh_session_permissions(user_id, app_id, token=token)
+    if fresh_perms:
+        session['sso_permissions'] = fresh_perms
+        return jsonify({'success': True, 'message': 'Permissions refreshed', 'count': len(fresh_perms)})
+    return jsonify({'success': False, 'message': 'Failed to refresh permissions'})

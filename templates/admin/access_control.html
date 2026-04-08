@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Access Control{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard.index') }}">Home</a>
+<span class="separator">/</span>
+<a href="{{ url_for('admin.index') }}">Admin</a>
+<span class="separator">/</span>
+<span class="current">Access Control</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-shield-lock"></i> Access Control</h2>
+    <button class="btn btn-outline-secondary btn-sm" hx-post="{{ url_for('admin.refresh_session') }}"
+        hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}' hx-swap="none"
+        hx-on::after-request="if(event.detail.successful) { showToast('Permissions refreshed'); location.reload(); }">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh My Permissions
+    </button>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="acTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button"
+            role="tab" aria-controls="users-pane" aria-selected="true">
+            <i class="bi bi-people me-1"></i> Users
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles-pane" type="button"
+            role="tab" aria-controls="roles-pane" aria-selected="false">
+            <i class="bi bi-person-badge me-1"></i> Roles
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="matrix-tab" data-bs-toggle="tab" data-bs-target="#matrix-pane" type="button"
+            role="tab" aria-controls="matrix-pane" aria-selected="false">
+            <i class="bi bi-grid-3x3 me-1"></i> Permission Matrix
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="acTabContent">
+    {# ── Users tab ─────────────────────────────────────────────────── #}
+    <div class="tab-pane fade show active" id="users-pane" role="tabpanel" aria-labelledby="users-tab">
+        <div hx-get="{{ url_for('admin.access_control_users') }}" hx-trigger="load" hx-swap="innerHTML">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">Loading users…</p>
+            </div>
+        </div>
+    </div>
+
+    {# ── Roles tab ─────────────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="roles-pane" role="tabpanel" aria-labelledby="roles-tab">
+        <div hx-get="{{ url_for('admin.access_control_roles') }}" hx-trigger="intersect once" hx-swap="innerHTML">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">Loading roles…</p>
+            </div>
+        </div>
+    </div>
+
+    {# ── Matrix tab ────────────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="matrix-pane" role="tabpanel" aria-labelledby="matrix-tab">
+        <div hx-get="{{ url_for('admin.access_control_matrix') }}" hx-trigger="intersect once" hx-swap="innerHTML">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">Loading matrix…</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Shared modal container for HTMX partial loads ───────────────── #}
+<div class="modal fade" id="acModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="acModalContent">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showToast(msg) {
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+        toast.style.zIndex = '9999';
+        toast.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.detail.target.id === 'acModalContent') {
+            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('acModal'));
+            modal.show();
+        }
+    });
+</script>
+{% endblock %}

@@ -35,6 +35,8 @@
         <div class="sidebar-scroll">
             <nav class="sidebar-nav">
                 <ul class="nav flex-column">
+                    {# ── Dashboard ─────────────────────────────────────── #}
+                    {% if has_perm('DASHBOARD.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}"
                             href="{{ url_for('dashboard.index') }}">
@@ -42,7 +44,15 @@
                             <span>Dashboard</span>
                         </a>
                     </li>
+                    {% endif %}
+
+                    {# ── PRODUCTION section ────────────────────────────── #}
+                    {% set show_production = has_perm('PROCESS_ORDER.VIEW') or has_perm('TARGET_WEIGHT.VIEW') or
+                    has_perm('NPL.VIEW') or has_perm('QA.VIEW') or has_perm('OPTIMIZER.VIEW') %}
+                    {% if show_production %}
                     <li class="nav-section">PRODUCTION</li>
+                    {% endif %}
+                    {% if has_perm('PROCESS_ORDER.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'process_orders' %}active{% endif %}"
                             href="{{ url_for('process_orders.index') }}">
@@ -50,6 +60,8 @@
                             <span>Process Orders</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_perm('TARGET_WEIGHT.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'target_weight' %}active{% endif %}"
                             href="{{ url_for('target_weight.index') }}">
@@ -57,6 +69,8 @@
                             <span>Target Weight</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_perm('NPL.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'npl' %}active{% endif %}"
                             href="{{ url_for('npl.index') }}">
@@ -64,6 +78,8 @@
                             <span>NPL Calculation</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_perm('QA.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'qa' %}active{% endif %}"
                             href="{{ url_for('qa.data_grid') }}">
@@ -71,6 +87,8 @@
                             <span>QA Workflow</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_perm('OPTIMIZER.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'optimizer' %}active{% endif %}"
                             href="{{ url_for('optimizer.index') }}">
@@ -78,7 +96,14 @@
                             <span>Optimizer</span>
                         </a>
                     </li>
+                    {% endif %}
+
+                    {# ── DATA MANAGEMENT section ───────────────────────── #}
+                    {% set show_data_mgmt = has_perm('FG_CODE.VIEW') or has_perm('MASTER_DATA.VIEW') %}
+                    {% if show_data_mgmt %}
                     <li class="nav-section">DATA MANAGEMENT</li>
+                    {% endif %}
+                    {% if has_perm('FG_CODE.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'fg_codes' %}active{% endif %}"
                             href="{{ url_for('fg_codes.index') }}">
@@ -86,6 +111,8 @@
                             <span>FG Codes</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_perm('MASTER_DATA.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link nav-sub-toggle {% if request.blueprint == 'master_data' %}active{% endif %}"
                             data-bs-toggle="collapse" data-bs-target="#masterDataSub"
@@ -153,7 +180,14 @@
                             </ul>
                         </div>
                     </li>
+                    {% endif %}
+
+                    {# ── OPERATIONS section ────────────────────────────── #}
+                    {% set show_operations = has_perm('BATCH.VIEW') or has_perm('REPORT.VIEW') %}
+                    {% if show_operations %}
                     <li class="nav-section">OPERATIONS</li>
+                    {% endif %}
+                    {% if has_perm('BATCH.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'batch' %}active{% endif %}"
                             href="{{ url_for('batch.index') }}">
@@ -161,6 +195,8 @@
                             <span>Batch Processing</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_perm('REPORT.VIEW') %}
                     <li class="nav-item">
                         <a class="nav-link nav-sub-toggle {% if request.blueprint == 'reports' %}active{% endif %}"
                             data-bs-toggle="collapse" data-bs-target="#reportsSub"
@@ -183,6 +219,10 @@
                             </ul>
                         </div>
                     </li>
+                    {% endif %}
+
+                    {# ── SYSTEM section ────────────────────────────────── #}
+                    {% if has_perm('ADMIN.PANEL') %}
                     <li class="nav-section">SYSTEM</li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.blueprint == 'admin' %}active{% endif %}"
@@ -191,6 +231,7 @@
                             <span>Admin</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </nav>
         </div>

@@ -69,9 +69,11 @@
 {% block content %}
 <div class="page-header">
     <h2><i class="bi bi-clipboard-data"></i> Process Orders</h2>
+    {% if has_perm('PROCESS_ORDER.CREATE') %}
     <a href="{{ url_for('process_orders.create') }}" class="btn btn-primary">
         <i class="bi bi-plus-lg"></i> New Process Order
     </a>
+    {% endif %}
 </div>
 
 <div class="card">

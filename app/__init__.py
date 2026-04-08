@@ -5,7 +5,7 @@ Auth-first architecture — SSO via the Al Wahdania Auth Platform.
 """
 import os
 import logging
-from flask import Flask, g, request
+from flask import Flask, g, request, session
 
 from app.config.settings import config_by_name
 from app.database import init_db, db_session, ensure_extra_tables
@@ -82,9 +82,14 @@ def create_app(config_name: str = None) -> Flask:
         sync_pages_on_startup(app, app_id, ADMIN_PAGES)
 
     # ── Jinja2 Globals / Filters ──────────────────────────────────────
+    def _has_perm(code):
+        """Template helper — True when current session owns *code*."""
+        return code in session.get('sso_permissions', [])
+
     app.jinja_env.globals.update(
         app_name='cGR8s',
         app_version='1.0.0',
+        has_perm=_has_perm,
     )
     app.jinja_env.filters['date'] = format_date
     app.jinja_env.filters['number'] = format_number

@@ -13,8 +13,10 @@
 <div class="page-header">
     <h2><i class="bi bi-check-circle"></i> Target Weight Results – {{ po.process_order_number }}</h2>
     <div class="d-flex gap-2">
+        {% if has_perm('NPL.CALCULATE') %}
         <a href="{{ url_for('npl.calculate', process_order_id=po.id) }}" class="btn btn-primary"><i
                 class="bi bi-graph-down"></i> Calculate NPL</a>
+        {% endif %}
         <a href="{{ url_for('process_orders.detail', id=po.id) }}" class="btn btn-outline-primary">Back to Order</a>
     </div>
 </div>

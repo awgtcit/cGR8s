@@ -7,6 +7,7 @@ Usage:
     init_sso_middleware(app)
 """
 import logging
+import time
 from functools import wraps
 from flask import request, session, redirect, g
 from app.sdk.auth_client import validate_token
@@ -41,7 +42,9 @@ def init_sso_middleware(app, public_paths=None, login_url='/login'):
                 session['sso_user'] = user_info['user']
                 session['sso_roles'] = [r['code'] for r in user_info.get('roles', [])]
                 session['sso_permissions'] = user_info.get('permissions', [])
+                session['sso_token'] = launch_token
                 session['sso_authenticated'] = True
+                session['sso_perm_ts'] = time.time()
                 session.permanent = True
                 logger.info("SSO login: %s", user_info['user'].get('email'))
 
@@ -61,6 +64,23 @@ def init_sso_middleware(app, public_paths=None, login_url='/login'):
 
         # Check existing session
         if session.get('sso_authenticated'):
+            # Optional: auto-refresh permissions if stale
+            perm_ttl = app.config.get('SSO_PERMISSION_TTL', 900)  # 15 min default
+            perm_ts = session.get('sso_perm_ts', 0)
+            if perm_ttl and (time.time() - perm_ts) > perm_ttl:
+                try:
+                    from app.sdk.auth_client import refresh_session_permissions
+                    user_id = session.get('sso_user', {}).get('id')
+                    app_id = app.config.get('AUTH_APP_APPLICATION_ID', '')
+                    token = session.get('sso_token')
+                    if user_id and app_id:
+                        fresh = refresh_session_permissions(user_id, app_id, token=token)
+                        if fresh:
+                            session['sso_permissions'] = fresh
+                            session['sso_perm_ts'] = time.time()
+                except Exception:
+                    logger.debug("Permission TTL refresh failed, using cached permissions")
+
             g.current_user = session.get('sso_user', {})
             g.current_user_id = g.current_user.get('id')
             g.current_roles = session.get('sso_roles', [])

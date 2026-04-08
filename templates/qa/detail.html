@@ -14,7 +14,7 @@
 <div class="page-header">
     <h2><i class="bi bi-shield-check"></i> QA Analysis</h2>
     <div class="d-flex gap-2">
-        {% if qa.status == 'pending_review' %}
+        {% if qa.status == 'pending_review' and has_perm('QA.APPROVE') %}
         <form method="post" action="{{ url_for('qa.approve', id=qa.id) }}" class="d-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Approve</button>

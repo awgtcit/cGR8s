@@ -11,9 +11,11 @@
 {% block content %}
 <div class="page-header">
     <h2><i class="bi bi-upc-scan"></i> FG Codes</h2>
+    {% if has_perm('FG_CODE.CREATE') %}
     <a href="{{ url_for('fg_codes.create') }}" class="btn btn-primary">
         <i class="bi bi-plus-lg"></i> New FG Code
     </a>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -42,9 +44,11 @@
                         <td>{{ fg.blend or '–' }}</td>
                         <td>{{ fg.cig_length|number(1) if fg.cig_length else '–' }}</td>
                         <td>
+                            {% if has_perm('FG_CODE.EDIT') %}
                             <a href="{{ url_for('fg_codes.edit', id=fg.id) }}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% else %}

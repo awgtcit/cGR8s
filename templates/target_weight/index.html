@@ -33,8 +33,12 @@
                         <td>{{ fg_lookup.get(po.fg_code_id, po.fg_code_id) }}</td>
                         <td>{{ po.process_date|date if po.process_date else '–' }}</td>
                         <td>{{ po.status }}</td>
-                        <td><a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}"
-                                class="btn btn-sm btn-primary"><i class="bi bi-calculator"></i> Calculate</a></td>
+                        <td>
+                            {% if has_perm('TARGET_WEIGHT.CALCULATE') %}
+                            <a href="{{ url_for('target_weight.calculate', process_order_id=po.id) }}"
+                                class="btn btn-sm btn-primary"><i class="bi bi-calculator"></i> Calculate</a>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr>

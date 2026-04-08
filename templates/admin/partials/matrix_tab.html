@@ -1,0 +1,46 @@
+{# HTMX partial – Permission matrix (roles × permissions) #}
+{% if roles and categories %}
+<div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle text-center" style="font-size:0.85rem;">
+        <thead class="table-light">
+            <tr>
+                <th class="text-start" style="min-width:180px;">Permission</th>
+                {% for role in roles %}
+                <th style="writing-mode:vertical-rl;transform:rotate(180deg);min-width:40px;padding:8px 4px;">
+                    {{ role.name }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for category, perms in categories.items() %}
+            <tr class="table-secondary">
+                <td colspan="{{ roles|length + 1 }}" class="text-start fw-bold">{{ category }}</td>
+            </tr>
+            {% for p in perms %}
+            <tr>
+                <td class="text-start">
+                    {{ p.name }}
+                    <code class="ms-1 small text-muted">{{ p.code }}</code>
+                </td>
+                {% for role in roles %}
+                <td>
+                    {% if p.id in matrix.get(role.id, set()) %}
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    {% else %}
+                    <i class="bi bi-dash text-muted"></i>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-grid-3x3 fs-1"></i>
+    <p class="mt-2">No roles or permissions found.</p>
+</div>
+{% endif %}

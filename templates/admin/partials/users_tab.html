@@ -1,0 +1,51 @@
+{# HTMX partial – Users list with role badges #}
+{% if users %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Roles</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>
+                    <div class="fw-semibold">{{ u.get('user_id', u.get('id', '—')) }}</div>
+                </td>
+                <td hx-get="{{ url_for('admin.user_roles_badges', user_id=u.get('user_id', u.get('id'))) }}"
+                    hx-trigger="load" hx-swap="innerHTML">
+                    <span class="spinner-border spinner-border-sm text-muted"></span>
+                </td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary"
+                        hx-get="{{ url_for('admin.user_roles_detail', user_id=u.get('user_id', u.get('id'))) }}"
+                        hx-target="#acModalContent" hx-swap="innerHTML">
+                        <i class="bi bi-pencil-square me-1"></i>Manage Roles
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if meta and meta.get('total_pages', 1) > 1 %}
+<nav aria-label="User pagination">
+    <ul class="pagination justify-content-center">
+        {% for p in range(1, meta.total_pages + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+            <a class="page-link" href="#" hx-get="{{ url_for('admin.access_control_users', page=p) }}"
+                hx-target="#users-pane > div" hx-swap="innerHTML">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-people fs-1"></i>
+    <p class="mt-2">No users found for this application.</p>
+</div>
+{% endif %}

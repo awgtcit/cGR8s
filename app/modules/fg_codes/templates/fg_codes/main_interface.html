@@ -637,18 +637,24 @@
                         </div>
                     </div>
                     <div class="calc-actions">
+                        {% if has_perm('TARGET_WEIGHT.CALCULATE') %}
                         <button type="button" id="calculateBtn" class="btn-calculate" disabled>
                             <i class="bi bi-calculator me-1"></i> Calculate Target
                         </button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="quick-actions">
+                    {% if has_perm('NPL.CALCULATE') %}
                     <button type="button" id="nplBtn" class="quick-action-btn" disabled>
                         <i class="bi bi-graph-down me-1"></i>NPL
                     </button>
+                    {% endif %}
+                    {% if has_perm('OPTIMIZER.RUN') %}
                     <button type="button" id="optimizerBtn" class="quick-action-btn" disabled>
                         <i class="bi bi-graph-up-arrow me-1"></i>Optimizer
                     </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -678,7 +684,8 @@
                             <input type="text" id="processOrderId" class="form-control form-control-sm"
                                 placeholder="e.g. 1013500" required>
                         </div>
-                        <button type="button" id="savePOBtn" class="btn btn-sm btn-primary">
+                        <button type="button" id="savePOBtn" class="btn btn-sm btn-primary" {% if not
+                            has_perm('PROCESS_ORDER.CREATE') %}disabled title="No permission" {% endif %}>
                             <i class="bi bi-check-lg me-1"></i>Save
                         </button>
                     </div>
@@ -692,7 +699,8 @@
                                 class="bi bi-check-circle-fill text-success me-1"></i>Process Order saved successfully
                         </p>
                         <button type="button" id="calcNplBtn" class="btn btn-success w-100"
-                            style="padding:10px 0; font-size:0.9rem;">
+                            style="padding:10px 0; font-size:0.9rem;" {% if not has_perm('NPL.CALCULATE') %}disabled
+                            title="No permission" {% endif %}>
                             <i class="bi bi-graph-down me-1"></i>Calculate NPL
                         </button>
                     </div>
