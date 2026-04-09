@@ -116,14 +116,14 @@ def _flatten_for_excel(report_type: str, context: dict):
         headers = ['TW (mg)', 'W_DRY', 'W_TOB', 'W_CIG', 'W_NTM',
                     'Stage1 Dilution', 'Stage2 Dilution', 'Total Dilution',
                     'Filtration %', 'Nic Demand S1', 'Nic Demand S2',
-                    'Nic Demand Total', 'Total Nicotine']
+                    'Total Nicotine', 'Nic Demand Total']
         if tw:
             data = [[
                 tw.tw, tw.w_dry, tw.w_tob, tw.w_cig, tw.w_ntm,
                 tw.stage1_dilution, tw.stage2_dilution, tw.total_dilution,
                 tw.filtration_pct, tw.stage1_pacifying_nicotine_demand,
                 tw.stage2_pacifying_nicotine_demand,
-                tw.total_nicotine_demand, tw.total_filtration_pct,
+                tw.total_filtration_pct, tw.total_nicotine_demand,
             ]]
         else:
             data = []

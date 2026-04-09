@@ -505,8 +505,8 @@ def export_excel():
             _v(tw, 'stage1_dilution', 4), _v(tw, 'stage2_dilution', 4),
             _v(tw, 'total_dilution', 4), _v(tw, 'filtration_pct', 4),
             _v(tw, 'stage1_pacifying_nicotine_demand', 4), _v(tw, 'stage2_pacifying_nicotine_demand', 4),
-            _v(tw, 'total_pacifying_nicotine_demand', 4), _v(tw, 'total_filtration_pct', 4),
-            _v(tw, 'total_nicotine_demand', 4),
+            _v(tw, 'total_pacifying_nicotine_demand', 4), _v(tw, 'total_nicotine_demand', 4),
+            _v(tw, 'total_filtration_pct', 4),
             # TW Output (3)
             _v(tw, 'w_dry', 2), _v(tw, 'w_tob', 2), _v(tw, 'w_cig', 2),
             # NPL Results (4)
@@ -621,8 +621,8 @@ def export_excel():
             _v(tw, 'stage1_dilution', 4), _v(tw, 'stage2_dilution', 4),
             _v(tw, 'total_dilution', 4), _v(tw, 'filtration_pct', 4),
             _v(tw, 'stage1_pacifying_nicotine_demand', 4), _v(tw, 'stage2_pacifying_nicotine_demand', 4),
-            _v(tw, 'total_pacifying_nicotine_demand', 4), _v(tw, 'total_filtration_pct', 4),
-            _v(tw, 'total_nicotine_demand', 4),
+            _v(tw, 'total_pacifying_nicotine_demand', 4), _v(tw, 'total_nicotine_demand', 4),
+            _v(tw, 'total_filtration_pct', 4),
             _v(tw, 'w_dry', 2), _v(tw, 'w_tob', 2), _v(tw, 'w_cig', 2),
             _v(npl, 'tac', 2), _v(npl, 'ttc', 2), _v(npl, 'npl_pct', 2), _v(npl, 'npl_kg', 2),
             fg_blend, po.status or '',

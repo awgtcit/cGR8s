@@ -121,7 +121,7 @@ def calculate(process_order_id):
             stage2_dilution=interim['stage2_dilution'],
             total_dilution=interim['total_dilution'],
             filtration_pct=interim['filtration_pct'],
-            total_nicotine_demand=interim['nic_demand_total'],
+            total_nicotine_demand=interim['total_nicotine'],
             stage1_pacifying_nicotine_demand=interim['nic_demand_stage1'],
             stage2_pacifying_nicotine_demand=interim['nic_demand_stage2'],
             total_pacifying_nicotine_demand=interim['nic_demand_total'],
