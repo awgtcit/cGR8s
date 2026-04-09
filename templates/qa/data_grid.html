@@ -242,43 +242,44 @@ TW Results | TW Output | NPL Results | FG+Blend | QA Measurements | Status
         {# ── FG+Blend (1) ── #}
         <td>{{ (r.fg.fg_code ~ ', ' ~ r.fg.blend_code) if r.fg and r.fg.fg_code and r.fg.blend_code else '–' }}</td>
         {# ── Pack OV + QA Measurements (29 cols) ── #}
-        <td class="num">{{ '%.2f'|format(r.qa.pack_ov) if r.qa and r.qa.pack_ov is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.lamina_cpi) if r.qa and r.qa.lamina_cpi is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.filling_power) if r.qa and r.qa.filling_power is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.filling_power_corr) if r.qa and r.qa.filling_power_corr is not none else
+        {% set qa = r.qa if r.qa else r.prev_qa %}
+        <td class="num">{{ '%.2f'|format(qa.pack_ov) if qa and qa.pack_ov is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.lamina_cpi) if qa and qa.lamina_cpi is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.filling_power) if qa and qa.filling_power is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.filling_power_corr) if qa and qa.filling_power_corr is not none else
             '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.maker_moisture) if r.qa and r.qa.maker_moisture is not none else '–' }}
+        <td class="num">{{ '%.2f'|format(qa.maker_moisture) if qa and qa.maker_moisture is not none else '–' }}
         </td>
-        <td class="num">{{ '%.2f'|format(r.qa.ssi) if r.qa and r.qa.ssi is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.pan_pct) if r.qa and r.qa.pan_pct is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.total_cig_length) if r.qa and r.qa.total_cig_length is not none else '–'
+        <td class="num">{{ '%.2f'|format(qa.ssi) if qa and qa.ssi is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.pan_pct) if qa and qa.pan_pct is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.total_cig_length) if qa and qa.total_cig_length is not none else '–'
             }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.circumference_mean) if r.qa and r.qa.circumference_mean is not none else
+        <td class="num">{{ '%.2f'|format(qa.circumference_mean) if qa and qa.circumference_mean is not none else
             '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.circumference_sd) if r.qa and r.qa.circumference_sd is not none else '–'
+        <td class="num">{{ '%.2f'|format(qa.circumference_sd) if qa and qa.circumference_sd is not none else '–'
             }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.cig_dia) if r.qa and r.qa.cig_dia is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.tobacco_weight_mean) if r.qa and r.qa.tobacco_weight_mean is not none else
+        <td class="num">{{ '%.2f'|format(qa.cig_dia) if qa and qa.cig_dia is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.tobacco_weight_mean) if qa and qa.tobacco_weight_mean is not none else
             '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.tobacco_weight_sd) if r.qa and r.qa.tobacco_weight_sd is not none else '–'
+        <td class="num">{{ '%.2f'|format(qa.tobacco_weight_sd) if qa and qa.tobacco_weight_sd is not none else '–'
             }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.tip_vf) if r.qa and r.qa.tip_vf is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.tip_vf_sd) if r.qa and r.qa.tip_vf_sd is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.filter_pd_mean) if r.qa and r.qa.filter_pd_mean is not none else '–' }}
+        <td class="num">{{ '%.2f'|format(qa.tip_vf) if qa and qa.tip_vf is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.tip_vf_sd) if qa and qa.tip_vf_sd is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.filter_pd_mean) if qa and qa.filter_pd_mean is not none else '–' }}
         </td>
-        <td class="num">{{ '%.2f'|format(r.qa.filter_weight) if r.qa and r.qa.filter_weight is not none else '–' }}</td>
-        <td class="num">{{ r.qa.plug_wrap_cu|cu if r.qa and r.qa.plug_wrap_cu is not none else '–' }}</td>
-        <td>{{ r.qa.tow if r.qa and r.qa.tow else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.cig_wt_mean) if r.qa and r.qa.cig_wt_mean is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.cig_wt_sd) if r.qa and r.qa.cig_wt_sd is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.cig_pdo) if r.qa and r.qa.cig_pdo is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.cig_hardness) if r.qa and r.qa.cig_hardness is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.cig_corr_hardness) if r.qa and r.qa.cig_corr_hardness is not none else '–'
+        <td class="num">{{ '%.2f'|format(qa.filter_weight) if qa and qa.filter_weight is not none else '–' }}</td>
+        <td class="num">{{ qa.plug_wrap_cu|cu if qa and qa.plug_wrap_cu is not none else '–' }}</td>
+        <td>{{ qa.tow if qa and qa.tow else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.cig_wt_mean) if qa and qa.cig_wt_mean is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.cig_wt_sd) if qa and qa.cig_wt_sd is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.cig_pdo) if qa and qa.cig_pdo is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.cig_hardness) if qa and qa.cig_hardness is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.cig_corr_hardness) if qa and qa.cig_corr_hardness is not none else '–'
             }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.loose_shorts) if r.qa and r.qa.loose_shorts is not none else '–' }}</td>
-        <td class="num">{{ '%.2f'|format(r.qa.plug_length) if r.qa and r.qa.plug_length is not none else '–' }}</td>
-        <td>{{ r.qa.mc if r.qa and r.qa.mc else '–' }}</td>
-        <td>{{ r.qa.company if r.qa and r.qa.company else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.loose_shorts) if qa and qa.loose_shorts is not none else '–' }}</td>
+        <td class="num">{{ '%.2f'|format(qa.plug_length) if qa and qa.plug_length is not none else '–' }}</td>
+        <td>{{ qa.mc if qa and qa.mc else '–' }}</td>
+        <td>{{ qa.company if qa and qa.company else '–' }}</td>
         <td>{{ r.po.status }}</td>
     </tr>
     {% else %}
