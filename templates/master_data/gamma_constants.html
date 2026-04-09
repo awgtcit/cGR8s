@@ -14,12 +14,14 @@
 <div class="page-header d-flex justify-content-between align-items-center">
     <h2><i class="bi bi-sliders"></i> Gamma Constants</h2>
     <div class="d-flex gap-2">
+        {% if has_perm('MASTER_DATA.EDIT') %}
         <form method="POST" action="{{ url_for('master_data.gamma_constants_reseed') }}" style="display:inline">
             <button type="submit" class="btn btn-outline-warning"
                 onclick="return confirm('Re-seed gamma constants with production data?')">
                 <i class="bi bi-arrow-repeat"></i> Reseed
             </button>
         </form>
+        {% endif %}
         {% if has_perm('MASTER_DATA.EDIT') %}
         <a href="{{ url_for('master_data.gamma_constant_create') }}" class="btn btn-primary"><i
                 class="bi bi-plus-lg"></i>

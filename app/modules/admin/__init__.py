@@ -330,6 +330,33 @@ _PAGE_INFO = {
 # Standard CRUD operations
 _CRUD_OPS = {'VIEW', 'CREATE', 'EDIT', 'UPDATE', 'DELETE'}
 
+# Friendly display labels for special (non-CRUD) permission operations
+_SPECIAL_OP_LABELS = {
+    # Master Data sub-pages
+    'BLENDS': 'Blends',
+    'MACHINES': 'Machines',
+    'SKUS': 'SKUs',
+    'TOBACCO_ANALYSIS': 'Tobacco Analysis',
+    'TARGETS_LIMITS': 'Targets & Limits',
+    'SIZE_CU': 'Size / CU',
+    'KP_TOLERANCE': 'KP Tolerance',
+    'PLUG_LENGTH': 'Plug Length / Cuts',
+    'APP_FIELDS': 'App Fields',
+    'LOOKUPS': 'Lookups',
+    'CALIBRATION': 'Calibration',
+    'FORMULA_CONSTANTS': 'Formula Constants',
+    'GAMMA_CONSTANTS': 'Gamma Constants',
+    # Other special operations
+    'CALCULATE': 'Calculate',
+    'EXPORT': 'Export',
+    'RUN': 'Run',
+    'ENTER': 'Enter',
+    'APPROVE': 'Approve',
+    'GENERATE': 'Generate',
+    'DOWNLOAD': 'Download',
+    'PANEL': 'Panel',
+}
+
 
 def _organize_permissions_by_page(all_perms, assigned_ids):
     """Organize permissions by page, splitting CRUD and special operations.
@@ -369,6 +396,7 @@ def _organize_permissions_by_page(all_perms, assigned_ids):
             'code': p.get('code', ''),
             'name': p.get('name', ''),
             'op': op,
+            'display_name': _SPECIAL_OP_LABELS.get(op, op.replace('_', ' ').title()),
             'assigned': p['id'] in assigned_ids,
         }
         if op in _CRUD_OPS:

@@ -1,6 +1,6 @@
 """Master Data module – Blends, Physical Parameters, Calibration Constants, Machines, SKUs, Targets & Limits."""
 from flask import Blueprint, render_template, request, redirect, url_for, g, jsonify
-from app.auth.decorators import require_auth, require_permission
+from app.auth.decorators import require_auth, require_permission, require_any_permissions
 from app.config.constants import Permissions
 from app.repositories import (
     BlendMasterRepository, PhysicalParameterRepository,
@@ -27,7 +27,7 @@ def index():
 
 @bp.route('/blends')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_BLENDS)
 def blends():
     page, per_page = paginate_args(request.args)
     repo = BlendMasterRepository(g.db)
@@ -76,7 +76,7 @@ def blend_edit(id):
 
 @bp.route('/physical-params')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_BLENDS)
 def physical_params():
     page, per_page = paginate_args(request.args)
     repo = PhysicalParameterRepository(g.db)
@@ -109,7 +109,7 @@ def physical_param_edit(id):
 
 @bp.route('/calibration')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_CALIBRATION)
 def calibration():
     page, per_page = paginate_args(request.args)
     repo = CalibrationConstantRepository(g.db)
@@ -221,7 +221,7 @@ def physical_param_delete(id):
 
 @bp.route('/lookups')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_LOOKUPS)
 def lookups():
     repo = LookupRepository(g.db)
     page, per_page = paginate_args(request.args)
@@ -282,7 +282,7 @@ def lookup_delete(id):
 
 @bp.route('/machines')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_MACHINES)
 def machines():
     page, per_page = paginate_args(request.args)
     repo = MachineRepository(g.db)
@@ -343,7 +343,7 @@ def machine_delete(id):
 
 @bp.route('/skus')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_SKUS)
 def skus():
     page, per_page = paginate_args(request.args)
     repo = SKURepository(g.db)
@@ -415,7 +415,7 @@ def sku_delete(id):
 
 @bp.route('/tobacco-blend-analysis')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_TOBACCO_ANALYSIS)
 def tobacco_blend_analysis():
     page, per_page = paginate_args(request.args)
     repo = TobaccoBlendAnalysisRepository(g.db)
@@ -429,7 +429,7 @@ def tobacco_blend_analysis():
 
 @bp.route('/formula-constants')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_FORMULA_CONSTANTS)
 def formula_constants():
     page, per_page = paginate_args(request.args)
     repo = FormulaConstantRepository(g.db)
@@ -490,7 +490,7 @@ def formula_constant_delete(id):
 
 @bp.route('/gamma-constants')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_GAMMA_CONSTANTS)
 def gamma_constants():
     page, per_page = paginate_args(request.args)
     repo = GammaConstantRepository(g.db)
@@ -573,7 +573,7 @@ def gamma_constant_delete(id):
 
 @bp.route('/size-cu')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_SIZE_CU)
 def size_cu():
     page, per_page = paginate_args(request.args)
     repo = LookupRepository(g.db)
@@ -588,7 +588,7 @@ def size_cu():
 
 @bp.route('/kp-tolerance')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_KP_TOLERANCE)
 def kp_tolerance():
     page, per_page = paginate_args(request.args)
     repo = LookupRepository(g.db)
@@ -603,7 +603,7 @@ def kp_tolerance():
 
 @bp.route('/plug-length-cuts')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_PLUG_LENGTH)
 def plug_length_cuts():
     page, per_page = paginate_args(request.args)
     repo = LookupRepository(g.db)
@@ -618,7 +618,7 @@ def plug_length_cuts():
 
 @bp.route('/app-fields')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_APP_FIELDS)
 def app_fields():
     page, per_page = paginate_args(request.args)
     repo = LookupRepository(g.db)
@@ -634,7 +634,7 @@ def app_fields():
 
 @bp.route('/targets-limits')
 @require_auth
-@require_permission(Permissions.MASTER_DATA_VIEW)
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_TARGETS_LIMITS)
 def targets_limits():
     page, per_page = paginate_args(request.args)
     repo = FGCodeRepository(g.db)

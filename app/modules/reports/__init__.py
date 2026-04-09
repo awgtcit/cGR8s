@@ -1,7 +1,7 @@
 """Reports module – generate and download PDF/Excel reports."""
 import os
 from flask import Blueprint, render_template, request, send_file, g, jsonify, current_app
-from app.auth.decorators import require_auth, require_permission
+from app.auth.decorators import require_auth, require_permission, require_any_permissions
 from app.config.constants import Permissions, AuditAction
 from app.repositories import (
     ReportRepository, ProcessOrderRepository, NPLResultRepository,
@@ -143,7 +143,7 @@ def _flatten_for_excel(report_type: str, context: dict):
 
 @bp.route('/natural-loss')
 @require_auth
-@require_permission(Permissions.REPORT_VIEW)
+@require_any_permissions(Permissions.REPORT_VIEW, Permissions.REPORT_GENERATE)
 def natural_loss():
     """Natural Loss % reports grouped by Blend GTIN and FG GTIN."""
     po_repo = ProcessOrderRepository(g.db)

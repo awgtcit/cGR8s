@@ -99,7 +99,14 @@
                     {% endif %}
 
                     {# ── DATA MANAGEMENT section ───────────────────────── #}
-                    {% set show_data_mgmt = has_perm('FG_CODE.VIEW') or has_perm('MASTER_DATA.VIEW') %}
+                    {% set show_master_data = has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.BLENDS') or
+                    has_perm('MASTER_DATA.MACHINES') or has_perm('MASTER_DATA.SKUS') or
+                    has_perm('MASTER_DATA.TOBACCO_ANALYSIS') or has_perm('MASTER_DATA.TARGETS_LIMITS') or
+                    has_perm('MASTER_DATA.SIZE_CU') or has_perm('MASTER_DATA.KP_TOLERANCE') or
+                    has_perm('MASTER_DATA.PLUG_LENGTH') or has_perm('MASTER_DATA.APP_FIELDS') or
+                    has_perm('MASTER_DATA.LOOKUPS') or has_perm('MASTER_DATA.CALIBRATION') or
+                    has_perm('MASTER_DATA.FORMULA_CONSTANTS') or has_perm('MASTER_DATA.GAMMA_CONSTANTS') %}
+                    {% set show_data_mgmt = has_perm('FG_CODE.VIEW') or show_master_data %}
                     {% if show_data_mgmt %}
                     <li class="nav-section">DATA MANAGEMENT</li>
                     {% endif %}
@@ -112,7 +119,7 @@
                         </a>
                     </li>
                     {% endif %}
-                    {% if has_perm('MASTER_DATA.VIEW') %}
+                    {% if show_master_data %}
                     <li class="nav-item">
                         <a class="nav-link nav-sub-toggle {% if request.blueprint == 'master_data' %}active{% endif %}"
                             data-bs-toggle="collapse" data-bs-target="#masterDataSub"
@@ -125,58 +132,84 @@
                         <div class="collapse {% if request.blueprint == 'master_data' %}show{% endif %}"
                             id="masterDataSub">
                             <ul class="nav flex-column sub-nav">
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.BLENDS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.blends' %}active{% endif %}"
                                         href="{{ url_for('master_data.blends') }}"><i
                                             class="bi bi-diagram-3"></i><span>Blends</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.MACHINES') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.machines' %}active{% endif %}"
                                         href="{{ url_for('master_data.machines') }}"><i
                                             class="bi bi-gear-wide-connected"></i><span>Machines</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.SKUS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.skus' %}active{% endif %}"
                                         href="{{ url_for('master_data.skus') }}"><i
                                             class="bi bi-box-seam"></i><span>SKUs</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.TOBACCO_ANALYSIS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.tobacco_blend_analysis' %}active{% endif %}"
                                         href="{{ url_for('master_data.tobacco_blend_analysis') }}"><i
                                             class="bi bi-graph-up"></i><span>Tobacco Analysis</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.TARGETS_LIMITS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.targets_limits' %}active{% endif %}"
                                         href="{{ url_for('master_data.targets_limits') }}"><i
                                             class="bi bi-bullseye"></i><span>Targets &amp; Limits</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.SIZE_CU') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.size_cu' %}active{% endif %}"
                                         href="{{ url_for('master_data.size_cu') }}"><i
                                             class="bi bi-rulers"></i><span>Size / CU</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.KP_TOLERANCE') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.kp_tolerance' %}active{% endif %}"
                                         href="{{ url_for('master_data.kp_tolerance') }}"><i
                                             class="bi bi-speedometer2"></i><span>KP Tolerance</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.PLUG_LENGTH') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.plug_length_cuts' %}active{% endif %}"
                                         href="{{ url_for('master_data.plug_length_cuts') }}"><i
                                             class="bi bi-scissors"></i><span>Plug Length / Cuts</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.APP_FIELDS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.app_fields' %}active{% endif %}"
                                         href="{{ url_for('master_data.app_fields') }}"><i
                                             class="bi bi-input-cursor-text"></i><span>App Fields</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.LOOKUPS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.lookups' %}active{% endif %}"
                                         href="{{ url_for('master_data.lookups') }}"><i
                                             class="bi bi-list-ul"></i><span>Lookups</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.CALIBRATION') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.calibration' %}active{% endif %}"
                                         href="{{ url_for('master_data.calibration') }}"><i
                                             class="bi bi-bullseye"></i><span>Calibration</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.FORMULA_CONSTANTS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.formula_constants' %}active{% endif %}"
                                         href="{{ url_for('master_data.formula_constants') }}"><i
                                             class="bi bi-calculator"></i><span>Formula Constants</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.GAMMA_CONSTANTS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.gamma_constants' %}active{% endif %}"
                                         href="{{ url_for('master_data.gamma_constants') }}"><i
                                             class="bi bi-sliders"></i><span>Gamma Constants</span></a></li>
+                                {% endif %}
                             </ul>
                         </div>
                     </li>
