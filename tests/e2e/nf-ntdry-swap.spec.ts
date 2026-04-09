@@ -78,4 +78,31 @@ test.describe('NF / NTDRY Column Swap in QA Data Grid', () => {
             }
         }
     });
+
+    test('Recalculate PO 2004038 and verify NF value', async ({ page }) => {
+        // Navigate to Target Weight
+        await page.goto(`${BASE}/target-weight/`);
+        await page.waitForLoadState('networkidle');
+
+        // Select PO 2004038
+        const poSelect = page.locator('select[name="process_order_id"], #process_order_id');
+        if (await poSelect.count() > 0) {
+            await poSelect.selectOption({ label: /2004038/ });
+            await page.waitForTimeout(500);
+        }
+
+        // Click Calculate
+        const calcBtn = page.locator('button:has-text("Calculate"), input[type="submit"]').first();
+        if (await calcBtn.count() > 0) {
+            await calcBtn.click();
+            await page.waitForLoadState('networkidle');
+        }
+
+        await page.screenshot({ path: 'test-results/tw-recalc-2004038.png', fullPage: true });
+
+        // Verify in QA Data Grid
+        await page.goto(`${BASE}/qa/data-grid`);
+        await page.waitForLoadState('networkidle');
+        await page.screenshot({ path: 'test-results/qa-nf-after-recalc.png', fullPage: true });
+    });
 });

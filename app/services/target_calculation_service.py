@@ -95,12 +95,18 @@ class TargetCalculationService:
         else:
             nic_demand_total = (n_tgt * 100) / (100 - total_dilution)
 
-        # ── Total Nicotine ───────────────────────────────────────
+        # ── Total Nicotine (NTDRY) ────────────────────────────────
         filtration_factor = (1 - filtration_pct / 100)
         if filtration_factor <= 0:
             total_nicotine = 0
         else:
             total_nicotine = (nic_demand_total * 100) / ((1 - filtration_pct / 100) * 100)
+
+        # ── Nicotine Filtration % (NF) ────────────────────────────
+        if filtration_pct >= 100:
+            nicotine_filtration_pct = 0
+        else:
+            nicotine_filtration_pct = (n_tgt * 100) / (100 - filtration_pct)
 
         # ── Output Weights (in mg) ───────────────────────────────────
         # N_BLD is a percentage (e.g. 1.663 means 1.663%)
@@ -129,6 +135,7 @@ class TargetCalculationService:
                 'nic_demand_stage2': round(nic_demand_stage2, 3),
                 'nic_demand_total': round(nic_demand_total, 3),
                 'total_nicotine': round(total_nicotine, 3),
+                'nicotine_filtration_pct': round(nicotine_filtration_pct, 3),
             },
             'output_data': {
                 'w_dry': round(w_dry, 3),
