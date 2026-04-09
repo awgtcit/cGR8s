@@ -1023,6 +1023,14 @@
                     + rRow('Total Dilution', d.interim_output.total_dilution)
                     + rRow('Filtration %', d.interim_output.filtration_pct)
                     + '</div>';
+                html += '<div class="result-group">'
+                    + '<div class="result-group-title">Pacifying Nicotine Demand</div>'
+                    + rRow('Stage 1', d.interim_output.nic_demand_stage1)
+                    + rRow('Stage 2', d.interim_output.nic_demand_stage2)
+                    + rRow('Total (NTD)', d.interim_output.nic_demand_total)
+                    + rRow('Filtration %', d.interim_output.nicotine_filtration_pct)
+                    + rRow('Total Nicotine Demand', d.interim_output.total_nicotine)
+                    + '</div>';
             }
             if (d.output_data) {
                 html += '<div class="result-group">'

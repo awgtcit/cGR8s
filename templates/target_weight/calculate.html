@@ -174,12 +174,17 @@
                             last_calc.stage2_pacifying_nicotine_demand is not none else '–' }}</td>
                     </tr>
                     <tr>
-                        <th class="text-muted">Total</th>
+                        <th class="text-muted">Total (NTD)</th>
                         <td>{{ '%.3f'|format(last_calc.total_pacifying_nicotine_demand) if
                             last_calc.total_pacifying_nicotine_demand is not none else '–' }}</td>
                     </tr>
                     <tr>
                         <th class="text-muted">Filtration %</th>
+                        <td>{{ '%.3f'|format(last_calc.total_nicotine_demand) if last_calc.total_nicotine_demand is not
+                            none else '–' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Total Nicotine Demand</th>
                         <td>{{ '%.3f'|format(last_calc.total_filtration_pct) if last_calc.total_filtration_pct is not
                             none else '–' }}</td>
                     </tr>
