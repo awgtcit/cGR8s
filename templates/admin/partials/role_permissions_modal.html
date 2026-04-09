@@ -6,26 +6,51 @@
 <form method="POST" action="{{ url_for('admin.update_role_permissions', role_id=role_id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+
+        {# ── Search bar ── #}
+        <div class="position-sticky top-0 bg-white pb-2 pt-1" style="z-index:10;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="permSearch" class="form-control border-start-0"
+                    placeholder="Search pages or permissions…" autocomplete="off">
+                <button type="button" class="btn btn-outline-secondary border-start-0" id="permSearchClear"
+                    style="display:none;" title="Clear search">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="permSearchNoResults" class="text-center text-muted small py-3" style="display:none;">
+                <i class="bi bi-search me-1"></i>No matching pages or permissions found.
+            </div>
+        </div>
+
         <p class="text-muted small mb-3">
             Assign permissions per page. <strong>CRUD</strong> = standard operations,
             <strong>Special</strong> = page-specific actions.
         </p>
 
         {% for page in pages %}
-        <div class="card mb-2 border-0 shadow-sm">
+        <div class="card mb-2 border-0 shadow-sm perm-page-card" data-page-name="{{ page.name|lower }}"
+            data-page-perms="{% for p in page.crud %}{{ p.display_name|lower }} {% endfor %}{% for p in page.special %}{{ p.display_name|lower }} {% endfor %}">
             <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center"
                 data-bs-toggle="collapse" data-bs-target="#page-{{ page.category }}" role="button"
                 style="cursor:pointer;">
                 <span>
                     <i class="{{ page.icon }} me-2 text-primary"></i>
                     <strong>{{ page.name }}</strong>
-                    <span class="badge bg-primary-subtle text-primary ms-2" id="count-{{ page.category }}">
-                        {% set ns = namespace(count=0) %}
+                    <span class="badge ms-2" id="count-{{ page.category }}">
+                        {% set ns = namespace(count=0, total=0) %}
+                        {% set ns.total = page.crud|length + page.special|length %}
                         {% for p in page.crud %}{% if p.assigned %}{% set ns.count = ns.count + 1 %}{% endif %}{% endfor
                         %}
                         {% for p in page.special %}{% if p.assigned %}{% set ns.count = ns.count + 1 %}{% endif %}{%
                         endfor %}
-                        {{ ns.count }}/{{ page.crud|length + page.special|length }}
+                        {% if ns.count == ns.total and ns.total > 0 %}
+                        <span class="badge bg-success-subtle text-success">{{ ns.count }}/{{ ns.total }}</span>
+                        {% elif ns.count > 0 %}
+                        <span class="badge bg-warning-subtle text-warning">{{ ns.count }}/{{ ns.total }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">0/{{ ns.total }}</span>
+                        {% endif %}
                     </span>
                 </span>
                 <div class="d-flex align-items-center gap-2">
@@ -52,11 +77,11 @@
                         </small>
                         <div class="d-flex flex-wrap gap-3">
                             {% for p in page.crud %}
-                            <div class="form-check">
+                            <div class="form-check perm-item" data-perm-label="{{ p.display_name|lower }}">
                                 <input class="form-check-input perm-cb perm-{{ page.category }}" type="checkbox"
                                     name="permission_ids" value="{{ p.id }}" id="perm_{{ p.id }}" {% if p.assigned
                                     %}checked{% endif %}>
-                                <label class="form-check-label" for="perm_{{ p.id }}">
+                                <label class="form-check-label" for="perm_{{ p.id }}" title="{{ p.code }}">
                                     <span
                                         class="badge {% if p.op == 'VIEW' %}bg-info-subtle text-info{% elif p.op == 'CREATE' %}bg-success-subtle text-success{% elif p.op in ('EDIT', 'UPDATE') %}bg-warning-subtle text-warning{% elif p.op == 'DELETE' %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-secondary{% endif %} me-1">
                                         {{ p.op }}
@@ -76,11 +101,11 @@
                         </small>
                         <div class="d-flex flex-wrap gap-3">
                             {% for p in page.special %}
-                            <div class="form-check">
+                            <div class="form-check perm-item" data-perm-label="{{ p.display_name|lower }}">
                                 <input class="form-check-input perm-cb perm-{{ page.category }}" type="checkbox"
                                     name="permission_ids" value="{{ p.id }}" id="perm_{{ p.id }}" {% if p.assigned
                                     %}checked{% endif %}>
-                                <label class="form-check-label" for="perm_{{ p.id }}">
+                                <label class="form-check-label" for="perm_{{ p.id }}" title="{{ p.code }}">
                                     <span class="badge bg-purple-subtle text-purple me-1"
                                         style="background-color:#f3e8ff!important;color:#7c3aed!important;">
                                         {{ p.display_name }}
@@ -107,4 +132,65 @@
             cb.checked = checked;
         });
     }
+
+    /* ── Live search / filter ── */
+    (function () {
+        var input = document.getElementById('permSearch');
+        var clearBtn = document.getElementById('permSearchClear');
+        var noResults = document.getElementById('permSearchNoResults');
+        if (!input) return;
+
+        input.addEventListener('input', function () {
+            var q = this.value.trim().toLowerCase();
+            clearBtn.style.display = q ? '' : 'none';
+            var cards = document.querySelectorAll('.perm-page-card');
+            var anyVisible = false;
+
+            cards.forEach(function (card) {
+                if (!q) {
+                    card.style.display = '';
+                    /* Reset individual perm highlight */
+                    card.querySelectorAll('.perm-item').forEach(function (pi) { pi.style.opacity = ''; });
+                    anyVisible = true;
+                    return;
+                }
+                var pageName = card.getAttribute('data-page-name') || '';
+                var permLabels = card.getAttribute('data-page-perms') || '';
+                var matchesPage = pageName.indexOf(q) !== -1;
+                var matchesPerm = permLabels.indexOf(q) !== -1;
+
+                if (matchesPage || matchesPerm) {
+                    card.style.display = '';
+                    anyVisible = true;
+                    /* If matched on perm label, highlight matching items */
+                    if (!matchesPage && matchesPerm) {
+                        card.querySelectorAll('.perm-item').forEach(function (pi) {
+                            var label = pi.getAttribute('data-perm-label') || '';
+                            pi.style.opacity = label.indexOf(q) !== -1 ? '' : '0.35';
+                        });
+                    } else {
+                        card.querySelectorAll('.perm-item').forEach(function (pi) { pi.style.opacity = ''; });
+                    }
+                    /* Expand the card */
+                    var collapse = card.querySelector('.collapse');
+                    if (collapse && !collapse.classList.contains('show')) {
+                        collapse.classList.add('show');
+                    }
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            noResults.style.display = (!anyVisible && q) ? '' : 'none';
+        });
+
+        clearBtn.addEventListener('click', function () {
+            input.value = '';
+            input.dispatchEvent(new Event('input'));
+            input.focus();
+        });
+
+        /* Auto-focus search when modal opens */
+        setTimeout(function () { input.focus(); }, 300);
+    })();
 </script>

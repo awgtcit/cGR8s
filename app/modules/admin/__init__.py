@@ -355,6 +355,40 @@ _SPECIAL_OP_LABELS = {
     'GENERATE': 'Generate',
     'DOWNLOAD': 'Download',
     'PANEL': 'Panel',
+    'SUBMIT': 'Submit',
+    'SETTINGS': 'Settings',
+    'USERS': 'Users',
+    'MASTERS': 'Masters',
+}
+
+# Category-specific overrides – maps (category, op) to a sidebar-matching label
+_CATEGORY_SPECIAL_LABELS = {
+    'REPORT': {
+        'GENERATE': 'Natural Loss %',
+        'DOWNLOAD': 'Download Reports',
+    },
+    'TARGET_WEIGHT': {
+        'CALCULATE': 'Calculate Targets',
+        'EXPORT': 'Export Results',
+    },
+    'NPL': {
+        'CALCULATE': 'Calculate NPL',
+        'EXPORT': 'Export NPL',
+    },
+    'OPTIMIZER': {
+        'RUN': 'Run Optimizer',
+        'EXPORT': 'Export Results',
+    },
+    'QA': {
+        'ENTER': 'Enter QA Data',
+        'APPROVE': 'Approve QA',
+    },
+    'PRODUCT_DEV': {
+        'APPROVE': 'Approve Versions',
+    },
+    'BATCH': {
+        'SUBMIT': 'Submit Batch Jobs',
+    },
 }
 
 
@@ -396,7 +430,8 @@ def _organize_permissions_by_page(all_perms, assigned_ids):
             'code': p.get('code', ''),
             'name': p.get('name', ''),
             'op': op,
-            'display_name': _SPECIAL_OP_LABELS.get(op, op.replace('_', ' ').title()),
+            'display_name': _CATEGORY_SPECIAL_LABELS.get(cat, {}).get(op)
+                           or _SPECIAL_OP_LABELS.get(op, op.replace('_', ' ').title()),
             'assigned': p['id'] in assigned_ids,
         }
         if op in _CRUD_OPS:
