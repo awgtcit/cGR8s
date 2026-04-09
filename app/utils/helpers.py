@@ -32,6 +32,22 @@ def format_number(val, decimals=4):
     return f'{float(val):,.{decimals}f}'
 
 
+def format_cu(val):
+    """Convert CU value to abbreviated form: 6000 → '6K', 1500 → '1.5K'."""
+    if val is None:
+        return ''
+    try:
+        num = float(val)
+    except (ValueError, TypeError):
+        return str(val)
+    if num >= 1000:
+        k_val = num / 1000
+        if k_val == int(k_val):
+            return f'{int(k_val)}K'
+        return f'{k_val:.1f}K'
+    return str(int(num)) if num == int(num) else f'{num:.2f}'
+
+
 def paginate_args(request_args, default_per_page=25):
     """Extract page/per_page from request args."""
     page = max(1, int(request_args.get('page', 1)))

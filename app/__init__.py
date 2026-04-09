@@ -11,7 +11,7 @@ from app.config.settings import config_by_name
 from app.database import init_db, db_session, ensure_extra_tables
 from app.utils.errors import register_error_handlers
 from app.utils.logging_config import configure_logging
-from app.utils.helpers import format_date, format_number
+from app.utils.helpers import format_date, format_number, format_cu
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +99,7 @@ def create_app(config_name: str = None) -> Flask:
     )
     app.jinja_env.filters['date'] = format_date
     app.jinja_env.filters['number'] = format_number
+    app.jinja_env.filters['cu'] = format_cu
 
     # ── Request Hooks ─────────────────────────────────────────────────
     @app.before_request

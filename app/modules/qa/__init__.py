@@ -126,6 +126,9 @@ def enter(process_order_id):
     if po.fg_code_id:
         fg = FGCodeRepository(g.db).get_by_id(po.fg_code_id)
 
+    # Get TW result for user-inputted NTM override
+    tw = TargetWeightResultRepository(g.db).get_by_process_order(process_order_id)
+
     if request.method == 'POST':
         data = request.form.to_dict()
         data['process_order_id'] = process_order_id
@@ -168,7 +171,11 @@ def enter(process_order_id):
         flash_success('QA data entered')
         return redirect(url_for('qa.detail', id=qa.id))
 
-    return render_template('qa/enter.html', po=po, fg=fg, data=_build_prefill(po, fg, po_repo),
+    prefill = _build_prefill(po, fg, po_repo)
+    # Override w_ntm with user-inputted value from Target Weight calculation
+    if tw and tw.w_ntm is not None:
+        prefill['w_ntm'] = tw.w_ntm
+    return render_template('qa/enter.html', po=po, fg=fg, data=prefill,
                            mc_options=_get_mc_options(g.db), company_options=COMPANY_OPTIONS)
 
 
@@ -402,6 +409,21 @@ def export_excel():
             return round(float(val), fmt) if isinstance(fmt, int) else val
         return val
 
+    def _format_cu(val):
+        """Convert CU value to abbreviated form: 6000 → '6K', 1500 → '1.5K'."""
+        if val is None or val == '':
+            return ''
+        try:
+            num = float(val)
+        except (ValueError, TypeError):
+            return str(val)
+        if num >= 1000:
+            k_val = num / 1000
+            if k_val == int(k_val):
+                return f'{int(k_val)}K'
+            return f'{k_val:.1f}K'
+        return str(int(num)) if num == int(num) else f'{num:.2f}'
+
     def _write_sheet(ws, headers, row_builder):
         """Write headers and data rows to a worksheet."""
         for ci, h in enumerate(headers, 1):
@@ -469,9 +491,9 @@ def export_excel():
             # Constants
             _v(tw, 'input_alpha', 4), _v(tw, 'input_beta', 4),
             _v(tw, 'input_gamma', 4), _v(tw, 'input_delta', 4),
-            # NC/NT/NTM/TW
+            # NC/NT/NTM/TW — NTM from TW result (user-inputted), TW = W_TOB
             _v(fg, 'c_plg', 2), _v(fg, 'target_nic', 4),
-            _v(fg, 'ntm_wt_mean', 4), _v(tw, 'tw', 2),
+            _v(tw, 'w_ntm', 4) or _v(fg, 'ntm_wt_mean', 4), _v(tw, 'w_tob', 2),
             # NPL Input (16)
             _v(ni, 't_iss', 2), _v(ni, 't_un', 2),
             _v(ni, 'l_dst', 2), _v(ni, 'l_win', 2), _v(ni, 'l_flr', 2),
@@ -500,7 +522,7 @@ def export_excel():
             _v(qa, 'tobacco_weight_mean', 2), _v(qa, 'tobacco_weight_sd', 2),
             _v(qa, 'tip_vf', 2), _v(qa, 'tip_vf_sd', 2),
             _v(qa, 'filter_pd_mean', 2), _v(qa, 'filter_weight', 2),
-            _v(qa, 'plug_wrap_cu', 2), _v(qa, 'tow') if qa else '',
+            _format_cu(_v(qa, 'plug_wrap_cu')), _v(qa, 'tow') if qa else '',
             _v(qa, 'cig_wt_mean', 2), _v(qa, 'cig_wt_sd', 2),
             _v(qa, 'cig_pdo', 2), _v(qa, 'cig_hardness', 2), _v(qa, 'cig_corr_hardness', 2),
             _v(qa, 'loose_shorts', 2), _v(qa, 'plug_length', 2),
@@ -509,6 +531,16 @@ def export_excel():
         ]
 
     _write_sheet(ws_prod, prod_headers, prod_row)
+
+    # Apply comma formatting (#,##0.00) for TISS/TUN/RW1 columns in Production Data
+    _tiss_col = prod_headers.index('TISS') + 1  # 1-indexed for openpyxl
+    _tun_col = prod_headers.index('TUN') + 1
+    _rw1_col = prod_headers.index('RW1') + 1
+    for col_idx in (_tiss_col, _tun_col, _rw1_col):
+        for row_idx in range(2, len(rows) + 2):
+            cell = ws_prod.cell(row=row_idx, column=col_idx)
+            if cell.value not in (None, ''):
+                cell.number_format = '#,##0.00'
 
     # ── Sheet 2: QA Analysis (38 columns) ──
     ws_qa = wb.create_sheet('QA Analysis')
@@ -542,7 +574,7 @@ def export_excel():
             _v(qa, 'tobacco_weight_mean', 2), _v(qa, 'tobacco_weight_sd', 2),
             _v(qa, 'tip_vf', 2), _v(qa, 'tip_vf_sd', 2), _v(qa, 'filter_pd_mean', 2),
             _v(qa, 'filter_weight', 2),
-            _v(qa, 'plug_wrap_cu', 2), _v(qa, 'tow') if qa else '',
+            _format_cu(_v(qa, 'plug_wrap_cu')), _v(qa, 'tow') if qa else '',
             _v(qa, 'cig_wt_mean', 2), _v(qa, 'cig_wt_sd', 2),
             _v(qa, 'cig_pdo', 2), _v(qa, 'cig_hardness', 2), _v(qa, 'cig_corr_hardness', 2),
             _v(qa, 'loose_shorts', 2), _v(qa, 'plug_length', 2),
@@ -579,7 +611,7 @@ def export_excel():
             _v(tw, 'input_alpha', 4), _v(tw, 'input_beta', 4),
             _v(tw, 'input_gamma', 4), _v(tw, 'input_delta', 4),
             _v(fg, 'c_plg', 2), _v(fg, 'target_nic', 4),
-            _v(fg, 'ntm_wt_mean', 4), _v(tw, 'tw', 2),
+            _v(tw, 'w_ntm', 4) or _v(fg, 'ntm_wt_mean', 4), _v(tw, 'w_tob', 2),
             _v(ni, 't_iss', 2), _v(ni, 't_un', 2),
             _v(ni, 'l_dst', 2), _v(ni, 'l_win', 2), _v(ni, 'l_flr', 2),
             _v(ni, 'l_srt', 2), _v(ni, 'l_dt', 2),
@@ -597,6 +629,16 @@ def export_excel():
         ]
 
     _write_sheet(ws_daily, daily_headers, daily_row)
+
+    # Apply comma formatting (#,##0.00) for TP/TUN/RW1 columns in Daily Operation
+    _tp_col_d = daily_headers.index('TP') + 1
+    _tun_col_d = daily_headers.index('TUN') + 1
+    _rw1_col_d = daily_headers.index('RW1') + 1
+    for col_idx in (_tp_col_d, _tun_col_d, _rw1_col_d):
+        for row_idx in range(2, len(rows) + 2):
+            cell = ws_daily.cell(row=row_idx, column=col_idx)
+            if cell.value not in (None, ''):
+                cell.number_format = '#,##0.00'
 
     # ── Write to buffer and send ──
     buf = BytesIO()
