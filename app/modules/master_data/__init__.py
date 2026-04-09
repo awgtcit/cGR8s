@@ -113,7 +113,10 @@ def physical_param_edit(id):
 def calibration():
     page, per_page = paginate_args(request.args)
     repo = CalibrationConstantRepository(g.db)
-    result = repo.get_paginated(page=page, per_page=per_page)
+    result = repo.get_paginated_with_fg_search(
+        page=page, per_page=per_page,
+        search=request.args.get('q', '')
+    )
     return render_template('master_data/calibration.html', **result)
 
 

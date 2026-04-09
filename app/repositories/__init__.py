@@ -110,6 +110,39 @@ class CalibrationConstantRepository(BaseRepository[CalibrationConstant]):
             CalibrationConstant.fg_code_id == fg_code_id
         ).first()
 
+    def get_paginated_with_fg_search(
+        self, page: int = 1, per_page: int = 20, search: str = ''
+    ) -> dict:
+        """Paginated list with FG-code search (JOIN on fg_codes table)."""
+        from sqlalchemy import or_
+        from app.models.fg_code import FGCode
+
+        q = self.session.query(CalibrationConstant).join(
+            FGCode, CalibrationConstant.fg_code_id == FGCode.id
+        )
+        if hasattr(CalibrationConstant, 'is_deleted'):
+            q = q.filter(CalibrationConstant.is_deleted == False)  # noqa: E712
+
+        if search:
+            q = q.filter(or_(
+                FGCode.fg_code.ilike(f'%{search}%'),
+                FGCode.brand.ilike(f'%{search}%'),
+            ))
+
+        total = q.count()
+        q = q.order_by(FGCode.fg_code.asc())
+        offset = (page - 1) * per_page
+        items = q.offset(offset).limit(per_page).all()
+        num_pages = (total + per_page - 1) // per_page
+        return {
+            'items': items,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': num_pages,
+            'total_pages': num_pages,
+        }
+
 
 class ProductVersionRepository(BaseRepository[ProductVersion]):
     def __init__(self, session=None):

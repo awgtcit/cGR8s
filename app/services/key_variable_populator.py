@@ -127,18 +127,27 @@ class KeyVariablePopulator:
         return None
 
     def _get_n_tgt(self, fg) -> float:
-        """N_tgt from SKU.nicotine where SKU.cig_code matches FG.cig_code."""
-        if not fg.cig_code:
-            return float(fg.target_nic or 0)
-
-        from app.models.sku import SKU
-        sku = self.session.query(SKU).filter(
-            SKU.cig_code == fg.cig_code,
-            SKU.is_active == True,
-            SKU.is_deleted == False,  # noqa: E712
+        """N_tgt cascade: CalibrationConstant → SKU.nicotine → FG.target_nic."""
+        # Priority 1: CalibrationConstant (authoritative source)
+        from app.models.calibration_constant import CalibrationConstant
+        cal = self.session.query(CalibrationConstant).filter(
+            CalibrationConstant.fg_code_id == fg.id
         ).first()
-        if sku and sku.nicotine is not None:
-            return float(sku.nicotine)
+        if cal and cal.n_tgt is not None:
+            return float(cal.n_tgt)
+
+        # Priority 2: SKU.nicotine via cig_code
+        if fg.cig_code:
+            from app.models.sku import SKU
+            sku = self.session.query(SKU).filter(
+                SKU.cig_code == fg.cig_code,
+                SKU.is_active == True,
+                SKU.is_deleted == False,  # noqa: E712
+            ).first()
+            if sku and sku.nicotine is not None:
+                return float(sku.nicotine)
+
+        # Priority 3: FGCode.target_nic fallback
         return float(fg.target_nic or 0)
 
     def _get_gamma(self, fg, n_tgt: float) -> float:
