@@ -68,13 +68,17 @@ def create_app(config_name: str = None) -> Flask:
     from app.sdk.session_middleware import init_sso_middleware
     init_sso_middleware(
         app,
-        public_paths=['/health', '/api/health', '/favicon.ico', '/static', '/login', '/logout'],
+        public_paths=['/health', '/api/health', '/favicon.ico', '/static', '/login', '/logout', '/api/integration'],
         login_url='/login',
     )
 
     # ── CSRF ──────────────────────────────────────────────────────────
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
+
+    # Exempt the integration API (receives config pushes from Auth-App)
+    from app.modules.integration_api import bp as integration_api_bp
+    csrf.exempt(integration_api_bp)
 
     # ── Admin Page Sync ───────────────────────────────────────────────
     app_id = app.config.get('AUTH_APP_APPLICATION_ID', '')
@@ -144,3 +148,6 @@ def _register_blueprints(app: Flask):
     app.register_blueprint(batch_bp, url_prefix='/batch')
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(product_dev_bp, url_prefix='/product-dev')
+
+    from app.modules.integration_api import bp as integration_api_bp
+    app.register_blueprint(integration_api_bp, url_prefix='/api/integration')
