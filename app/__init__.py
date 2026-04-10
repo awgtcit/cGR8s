@@ -63,17 +63,18 @@ def create_app(config_name: str = None) -> Flask:
     # ── Error Handlers ────────────────────────────────────────────────
     register_error_handlers(app)
 
-    # ── CSRF ──────────────────────────────────────────────────────────
-    from flask_wtf.csrf import CSRFProtect
-    csrf = CSRFProtect(app)
-
-    # ── SSO Middleware (Auth-first) ───────────────────────────────────
+    # ── SSO Middleware (must run BEFORE CSRF so embed_token can
+    #    populate the session before CSRF validation) ──────────────────
     from app.sdk.session_middleware import init_sso_middleware
     init_sso_middleware(
         app,
         public_paths=['/health', '/api/health', '/favicon.ico', '/static', '/login', '/logout'],
         login_url='/login',
     )
+
+    # ── CSRF ──────────────────────────────────────────────────────────
+    from flask_wtf.csrf import CSRFProtect
+    csrf = CSRFProtect(app)
 
     # ── Admin Page Sync ───────────────────────────────────────────────
     app_id = app.config.get('AUTH_APP_APPLICATION_ID', '')

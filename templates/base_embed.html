@@ -58,6 +58,53 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        /* Propagate embed=1 and embed_token on all HTMX requests so sub-pages stay authenticated in embed mode */
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var embedToken = params.get('embed_token') || '';
+            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+            /* ── HTMX: propagate embed + CSRF on every HTMX request ── */
+            document.body.addEventListener('htmx:configRequest', function (evt) {
+                var p = evt.detail.parameters;
+                if (!p.embed) p.embed = '1';
+                if (embedToken && !p.embed_token) p.embed_token = embedToken;
+                if (csrfToken) evt.detail.headers['X-CSRFToken'] = csrfToken;
+            });
+
+            /* ── Native forms: inject embed_token as hidden field ── */
+            if (embedToken) {
+                document.addEventListener('submit', function (evt) {
+                    var form = evt.target;
+                    if (form.tagName !== 'FORM') return;
+                    if (!form.querySelector('input[name="embed_token"]')) {
+                        var h = document.createElement('input');
+                        h.type = 'hidden'; h.name = 'embed_token'; h.value = embedToken;
+                        form.appendChild(h);
+                    }
+                    if (!form.querySelector('input[name="embed"]')) {
+                        var e = document.createElement('input');
+                        e.type = 'hidden'; e.name = 'embed'; e.value = '1';
+                        form.appendChild(e);
+                    }
+                }, true);
+            }
+
+            /* ── fetch/XHR: add embed header for JS fetch() calls ── */
+            if (embedToken && window.fetch) {
+                var _origFetch = window.fetch;
+                window.fetch = function (url, opts) {
+                    opts = opts || {};
+                    opts.headers = opts.headers || {};
+                    if (!opts.headers['X-Embed-Token']) opts.headers['X-Embed-Token'] = embedToken;
+                    if (!opts.headers['X-CSRFToken'] && csrfToken) opts.headers['X-CSRFToken'] = csrfToken;
+                    return _origFetch.call(this, url, opts);
+                };
+            }
+        })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 

@@ -1,11 +1,13 @@
-{% extends "base.html" %}
+{% extends base_template|default("base.html") %}
 {% block title %}Administration{% endblock %}
 
+{% if not embed_mode %}
 {% block breadcrumb %}
 <a href="{{ url_for('dashboard.index') }}">Home</a>
 <span class="separator">/</span>
 <span class="current">Admin</span>
 {% endblock %}
+{% endif %}
 
 {% block content %}
 <div class="page-header">
@@ -19,7 +21,8 @@
                 <i class="bi bi-shield-lock fs-1 text-primary"></i>
                 <h5 class="mt-2">Access Control</h5>
                 <p class="text-muted small">Manage user roles, permissions, and view the permission matrix.</p>
-                <a href="{{ url_for('admin.access_control') }}" class="btn btn-outline-primary mt-auto">Manage</a>
+                <a href="{{ url_for('admin.access_control') }}{{ '?embed=1&embed_token=' + embed_token if embed_mode else '' }}"
+                    class="btn btn-outline-primary mt-auto">Manage</a>
             </div>
         </div>
     </div>
@@ -29,7 +32,8 @@
                 <i class="bi bi-sliders2 fs-1 text-primary"></i>
                 <h5 class="mt-2">System Configuration</h5>
                 <p class="text-muted small">Manage Auth-App URL, default parameters, and application settings.</p>
-                <a href="{{ url_for('admin.system_config') }}" class="btn btn-outline-primary mt-auto">Manage</a>
+                <a href="{{ url_for('admin.system_config') }}{{ '?embed=1&embed_token=' + embed_token if embed_mode else '' }}"
+                    class="btn btn-outline-primary mt-auto">Manage</a>
             </div>
         </div>
     </div>
@@ -39,7 +43,8 @@
                 <i class="bi bi-journal-text fs-1 text-primary"></i>
                 <h5 class="mt-2">Audit Trail</h5>
                 <p class="text-muted small">View all user actions, data changes, and system events.</p>
-                <a href="{{ url_for('admin.audit_trail') }}" class="btn btn-outline-primary mt-auto">View Logs</a>
+                <a href="{{ url_for('admin.audit_trail') }}{{ '?embed=1&embed_token=' + embed_token if embed_mode else '' }}"
+                    class="btn btn-outline-primary mt-auto">View Logs</a>
             </div>
         </div>
     </div>
@@ -49,7 +54,8 @@
                 <i class="bi bi-database fs-1 text-primary"></i>
                 <h5 class="mt-2">Master Data</h5>
                 <p class="text-muted small">Manage blends, physical parameters, calibration constants, and lookups.</p>
-                <a href="{{ url_for('master_data.blends') }}" class="btn btn-outline-primary mt-auto">Manage</a>
+                <a href="{{ url_for('master_data.blends') }}{{ '?embed=1&embed_token=' + embed_token if embed_mode else '' }}"
+                    class="btn btn-outline-primary mt-auto">Manage</a>
             </div>
         </div>
     </div>

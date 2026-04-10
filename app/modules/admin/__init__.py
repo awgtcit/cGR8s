@@ -16,6 +16,20 @@ from app.sdk import auth_client
 bp = Blueprint('admin', __name__, template_folder='templates')
 logger = logging.getLogger(__name__)
 
+
+def _embed_redirect(endpoint, **kwargs):
+    """Redirect that preserves embed context (embed_token + embed=1)."""
+    url = url_for(endpoint, **kwargs)
+    token = getattr(g, 'embed_session_token', '') or request.form.get('embed_token') or request.args.get('embed_token') or ''
+    embed = request.args.get('embed') or request.form.get('embed') or ''
+    if token:
+        sep = '&' if '?' in url else '?'
+        url += f'{sep}embed_token={token}&embed=1'
+    elif embed == '1':
+        sep = '&' if '?' in url else '?'
+        url += f'{sep}embed=1'
+    return redirect(url)
+
 # Config keys that map to form field names
 _CONFIG_KEYS = [
     'auth_app_url', 'auth_api_key',
@@ -43,17 +57,30 @@ def _validate_url(url: str) -> bool:
 @require_auth
 @require_permission(Permissions.ADMIN_PANEL)
 def index():
-    return render_template('admin/index.html')
+    embed = request.args.get('embed') == '1'
+    return render_template(
+        'admin/index.html',
+        base_template='base_embed.html' if embed else 'base.html',
+        embed_mode=embed,
+        embed_token=getattr(g, 'embed_session_token', ''),
+    )
 
 
 @bp.route('/system-config')
 @require_auth
 @require_permission(Permissions.ADMIN_PANEL)
 def system_config():
+    embed = request.args.get('embed') == '1'
     repo = SystemConfigRepository(g.db)
     config_list = repo.get_all()
     configs = {cfg.config_key: cfg.config_value for cfg in config_list}
-    return render_template('admin/system_config.html', configs=configs)
+    return render_template(
+        'admin/system_config.html',
+        configs=configs,
+        base_template='base_embed.html' if embed else 'base.html',
+        embed_mode=embed,
+        embed_token=getattr(g, 'embed_session_token', ''),
+    )
 
 
 @bp.route('/system-config', methods=['POST'])
@@ -72,7 +99,7 @@ def update_system_config():
         # Validate URL fields
         if key == 'auth_app_url' and value and not _validate_url(value):
             flash('Invalid Auth-App URL format. Must be http:// or https://.', 'error')
-            return redirect(url_for('admin.system_config'))
+            return _embed_redirect('admin.system_config')
 
         existing = repo.get_by_key(key)
         if existing:
@@ -86,7 +113,7 @@ def update_system_config():
 
     g.db.commit()
     flash('Configuration saved successfully.', 'success')
-    return redirect(url_for('admin.system_config'))
+    return _embed_redirect('admin.system_config')
 
 
 @bp.route('/test-auth-connection', methods=['POST'])
@@ -167,6 +194,7 @@ def test_auth_connection():
 @require_auth
 @require_permission(Permissions.AUDIT_LOG_VIEW)
 def audit_trail():
+    embed = request.args.get('embed') == '1'
     page, per_page = paginate_args(request.args)
     repo = AuditLogRepository(g.db)
     result = repo.get_paginated(page=page, per_page=per_page, order_by='timestamp', order_dir='desc')
@@ -176,7 +204,10 @@ def audit_trail():
                            logs=result.get('items', []),
                            page=result.get('page', 1),
                            total_pages=result.get('total_pages', 1),
-                           actions=actions)
+                           actions=actions,
+                           base_template='base_embed.html' if embed else 'base.html',
+                           embed_mode=embed,
+                           embed_token=getattr(g, 'embed_session_token', ''))
 
 
 # ── Helper: app_id + token from config / session ─────────────────────────
@@ -198,6 +229,7 @@ def access_control():
         'admin/access_control.html',
         base_template='base_embed.html' if embed else 'base.html',
         embed_mode=embed,
+        embed_token=getattr(g, 'embed_session_token', ''),
     )
 
 
@@ -259,7 +291,7 @@ def update_user_roles(user_id):
         flash('User roles updated.', 'success')
     else:
         flash(f"Failed to update roles: {result.get('message', 'Unknown error')}", 'error')
-    return redirect(url_for('admin.access_control'))
+    return _embed_redirect('admin.access_control')
 
 
 @bp.route('/access-control/roles')
@@ -293,19 +325,19 @@ def create_role():
 
     if not name or not code:
         flash('Role name and code are required.', 'error')
-        return redirect(url_for('admin.access_control'))
+        return _embed_redirect('admin.access_control')
 
     # Validate code format: alphanumeric + underscore, prefixed with CGRS_
     if not re.match(r'^CGRS_[A-Z0-9_]{2,30}$', code):
         flash('Role code must start with CGRS_ followed by 2-30 uppercase letters/digits/underscores.', 'error')
-        return redirect(url_for('admin.access_control'))
+        return _embed_redirect('admin.access_control')
 
     result = auth_client.create_role(app_id, code, name, description)
     if result.get('success'):
         flash(f'Role "{name}" created successfully.', 'success')
     else:
         flash(f"Failed to create role: {result.get('message', 'Unknown error')}", 'error')
-    return redirect(url_for('admin.access_control'))
+    return _embed_redirect('admin.access_control')
 
 
 # ── Page-based permission grouping helper ────────────────────────────────
@@ -474,7 +506,7 @@ def update_role_permissions(role_id):
         flash('Role permissions updated.', 'success')
     else:
         flash(f"Failed to update permissions: {result.get('message', 'Unknown error')}", 'error')
-    return redirect(url_for('admin.access_control'))
+    return _embed_redirect('admin.access_control')
 
 
 @bp.route('/access-control/matrix')
