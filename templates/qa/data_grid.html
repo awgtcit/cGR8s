@@ -32,7 +32,9 @@ Macro: QA Analysis grid – 42 columns (5 new QA measurement columns)
 <tbody>
     {% for r in rows %}
     {% set src = r.qa if r.qa else r.prev_qa %}
-    <tr data-po-id="{{ r.po.id }}" data-po-number="{{ r.po.process_order_number }}">
+    {% set is_inherited = (not r.qa and r.prev_qa) %}
+    <tr data-po-id="{{ r.po.id }}" data-po-number="{{ r.po.process_order_number }}" {% if is_inherited %}
+        data-inherited="1" {% endif %}>
         <td>{{ loop.index }}</td>
         <td class="ed"><input type="date" class="cell-input" data-field="qr_date" data-col="1"
                 value="{{ r.qa.qr_date.strftime('%Y-%m-%d') if r.qa and r.qa.qr_date else (r.qr_date.strftime('%Y-%m-%d') if r.qr_date else '') }}">
@@ -964,6 +966,13 @@ Column AA = TP (instead of TISS).
         border-color: #f59e0b;
     }
 
+    /* Inherited (prev_qa) placeholder styling — dimmed italic reference values */
+    .excel-grid tr[data-inherited] .cell-input::placeholder {
+        color: #94a3b8;
+        font-style: italic;
+        opacity: 0.7;
+    }
+
     .excel-grid .cell-input[data-field="tow"],
     .excel-grid .cell-input[data-field="mc"],
     .excel-grid .cell-input[data-field="company"] {
@@ -1390,6 +1399,15 @@ Column AA = TP (instead of TISS).
        Inline QA Grid: paste from clipboard + save all
        ════════════════════════════════════════════════════════ */
 
+    // Convert inherited (prev_qa) cell values into placeholders so they are
+    // clearly reference-only and do not get sent as actual data on save.
+    document.querySelectorAll('#qa-grid tr[data-inherited] .cell-input').forEach(inp => {
+        if (inp.value) {
+            inp.placeholder = inp.value;
+            inp.value = '';
+        }
+    });
+
     // Editable field order (columns 13-36 in the grid = Pack OV → Company)
     const EDIT_FIELDS = [
         'pack_ov', 'lamina_cpi', 'filling_power', 'filling_power_corr', 'maker_moisture', 'ssi',
@@ -1549,15 +1567,17 @@ Column AA = TP (instead of TISS).
 
         gridRows.forEach(tr => {
             const poNumber = tr.dataset.poNumber;
+            const poId = tr.dataset.poId;
             const inputs = tr.querySelectorAll('.cell-input');
             const hasDirty = Array.from(inputs).some(inp => inp.classList.contains('dirty'));
             if (!hasDirty) return;
 
             dirtyCount++;
             // Build a 42-element array matching the grid column order
-            // cols 0-12 are read-only reference cols, col 4 = PO number (key)
+            // col 0 = PO ID (unique key), col 4 = PO number (display/fallback)
             const row = new Array(42).fill('');
-            row[4] = poNumber; // Process Order number is the match key
+            row[0] = poId;     // Unique process order ID for exact matching
+            row[4] = poNumber; // Process Order number as fallback
 
             // Only include dirty (changed) cells – leave others as empty string
             // so the backend skips unchanged fields

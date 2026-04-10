@@ -734,12 +734,14 @@ def bulk_paste():
 
     results = {'created': 0, 'updated': 0, 'skipped': [], 'errors': []}
 
-    # ── Step 1: Extract PO numbers and parse all rows ──
+    # ── Step 1: Extract PO IDs/numbers and parse all rows ──
     parsed = []
     for row_idx, cols in enumerate(raw_rows, start=1):
         if not isinstance(cols, list) or len(cols) < 5:
             results['errors'].append(f'Row {row_idx}: insufficient columns')
             continue
+        # col 0 = unique PO ID (from grid save), col 4 = PO number (fallback/paste)
+        po_id_str = (cols[0] or '').strip() if len(cols) > 0 else ''
         po_number = (cols[4] or '').strip()
         if not po_number or po_number in ('\u2013', '-'):
             results['errors'].append(f'Row {row_idx}: missing Process Order')
@@ -765,21 +767,38 @@ def bulk_paste():
         if not qa_data:
             results['skipped'].append(f'Row {row_idx}: no QA data found')
             continue
-        parsed.append((row_idx, po_number, qa_data))
+        parsed.append((row_idx, po_id_str, po_number, qa_data))
 
     if not parsed:
         return jsonify({'ok': True, **results})
 
     # ── Step 2: Bulk pre-fetch POs and existing QA records ──
-    unique_po_numbers = list({p[1] for p in parsed})
-    po_map = po_repo.get_by_order_numbers(unique_po_numbers)
+    # Prefer direct PO ID lookup (from grid save) over PO number (from paste)
+    direct_po_ids = [p[1] for p in parsed if p[1]]
+    fallback_po_numbers = list({p[2] for p in parsed if not p[1]})
 
-    matched_po_ids = [po_map[n].id for n in unique_po_numbers if n in po_map]
-    qa_map = qa_repo.get_by_process_orders(matched_po_ids)
+    # Build a unified po_id → PO map
+    po_by_id = {}
+    if direct_po_ids:
+        for po_obj in po_repo.get_by_ids(direct_po_ids):
+            po_by_id[str(po_obj.id)] = po_obj
+    po_by_number = {}
+    if fallback_po_numbers:
+        po_by_number = po_repo.get_by_order_numbers(fallback_po_numbers)
+        for po_obj in po_by_number.values():
+            po_by_id[str(po_obj.id)] = po_obj
+
+    all_po_ids = list(po_by_id.keys())
+    qa_map = qa_repo.get_by_process_orders(all_po_ids)
 
     # ── Step 3: Upsert with per-row error handling ──
-    for row_idx, po_number, qa_data in parsed:
-        po = po_map.get(po_number)
+    for row_idx, po_id_str, po_number, qa_data in parsed:
+        # Resolve PO: prefer ID (unique), fall back to number
+        po = None
+        if po_id_str:
+            po = po_by_id.get(po_id_str)
+        if not po:
+            po = po_by_number.get(po_number)
         if not po:
             results['skipped'].append(f'Row {row_idx}: PO "{po_number}" not found')
             continue
