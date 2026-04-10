@@ -1559,10 +1559,13 @@ Column AA = TP (instead of TISS).
             const row = new Array(42).fill('');
             row[4] = poNumber; // Process Order number is the match key
 
-            // Use data-col attribute to map each input to the correct column index
+            // Only include dirty (changed) cells – leave others as empty string
+            // so the backend skips unchanged fields
             inputs.forEach(inp => {
                 const col = parseInt(inp.dataset.col, 10);
-                if (!isNaN(col)) row[col] = inp.value.trim();
+                if (!isNaN(col) && inp.classList.contains('dirty')) {
+                    row[col] = inp.value.trim();
+                }
             });
             payload.push(row);
         });
