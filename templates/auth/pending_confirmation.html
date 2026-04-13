@@ -148,11 +148,10 @@
         (function () {
             var challengeId = '{{ challenge_id }}';
             var pollToken = '{{ poll_token }}';
-            var isSso = {{ 'true' if sso else 'false' }
-        };
-        var pollInterval = null;
-        var pollCount = 0;
-        var maxPolls = 60; // 2 minutes at 2s intervals
+            var isSso = {{ 'true' if sso else 'false' }};
+            var pollInterval = null;
+            var pollCount = 0;
+            var maxPolls = 60; // 2 minutes at 2s intervals
 
         function pollStatus() {
             pollCount++;
