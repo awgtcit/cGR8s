@@ -156,6 +156,35 @@ def poll_login_challenge(challenge_id, poll_token=''):
     return None
 
 
+def sso_login(employee_id, app_code):
+    """
+    Passwordless SSO — initiate login by employee ID.
+    Creates a challenge and sends FCM push to user's mobile device.
+    Returns dict with challenge_id, challenge_code, poll_token on success.
+    """
+    result = _api_request('POST', '/api/auth/sso-login', {
+        'employee_id': employee_id,
+        'app_code': app_code,
+    })
+    if result.get('success') and result.get('data'):
+        return result['data']
+    return {'message': result.get('message', 'SSO login failed')}
+
+
+def poll_sso_challenge(challenge_id, poll_token=''):
+    """
+    Poll SSO challenge status from Auth-App.
+    Returns dict with status and optional launch_token.
+    """
+    path = f'/api/auth/sso-poll/{challenge_id}'
+    if poll_token:
+        path += f'?poll_token={poll_token}'
+    result = _api_request('GET', path)
+    if result.get('success') and result.get('data'):
+        return result['data']
+    return None
+
+
 # ── Access-Control SDK (Roles / Permissions / Users) ──────────────────────
 
 def get_app_roles(application_id):

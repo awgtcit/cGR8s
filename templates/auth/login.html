@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +16,7 @@
             --bg: #F5F7F6;
             --text: #183026;
         }
+
         body {
             background: linear-gradient(135deg, var(--forest) 0%, var(--primary) 50%, var(--secondary) 100%);
             min-height: 100vh;
@@ -23,6 +25,7 @@
             justify-content: center;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
+
         .login-card {
             background: #fff;
             border-radius: 16px;
@@ -31,12 +34,14 @@
             width: 100%;
             max-width: 420px;
         }
+
         .login-header {
             background: var(--forest);
             color: #fff;
             padding: 2rem 2rem 1.5rem;
             text-align: center;
         }
+
         .login-header .brand-icon {
             display: inline-flex;
             align-items: center;
@@ -48,28 +53,34 @@
             font-size: 1.8rem;
             margin-bottom: 0.75rem;
         }
+
         .login-header h1 {
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
         }
+
         .login-header p {
             font-size: 0.85rem;
             opacity: 0.8;
             margin: 0;
         }
+
         .login-body {
             padding: 2rem;
         }
-        .form-floating > .form-control {
+
+        .form-floating>.form-control {
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             height: 3.2rem;
         }
-        .form-floating > .form-control:focus {
+
+        .form-floating>.form-control:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 0.2rem rgba(13, 107, 60, 0.15);
         }
+
         .btn-login {
             background: var(--primary);
             border: none;
@@ -80,26 +91,31 @@
             letter-spacing: 0.02em;
             transition: all 0.2s;
         }
+
         .btn-login:hover {
             background: var(--forest);
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(13, 107, 60, 0.3);
         }
+
         .btn-login:disabled {
             background: #aaa;
             transform: none;
             box-shadow: none;
         }
+
         .login-footer {
             text-align: center;
             padding: 0 2rem 1.5rem;
             color: #999;
             font-size: 0.8rem;
         }
+
         .alert {
             border-radius: 10px;
             font-size: 0.9rem;
         }
+
         .spinner-border-sm {
             width: 1rem;
             height: 1rem;
@@ -107,6 +123,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="login-card">
         <div class="login-header">
@@ -119,15 +136,16 @@
 
         <div class="login-body">
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            <i class="bi {% if category == 'danger' %}bi-exclamation-triangle{% elif category == 'warning' %}bi-exclamation-circle{% else %}bi-info-circle{% endif %} me-1"></i>
-                            {{ message }}
-                            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <i
+                    class="bi {% if category == 'danger' %}bi-exclamation-triangle{% elif category == 'warning' %}bi-exclamation-circle{% else %}bi-info-circle{% endif %} me-1"></i>
+                {{ message }}
+                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
             {% endwith %}
 
             <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
@@ -138,14 +156,14 @@
 
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control" id="login_id" name="login_id"
-                           placeholder="Email or Employee ID" required autofocus
-                           value="{{ request.form.get('login_id', '') }}">
+                        placeholder="Email or Employee ID" required autofocus
+                        value="{{ request.form.get('login_id', '') }}">
                     <label for="login_id"><i class="bi bi-person me-1"></i>Email or Employee ID</label>
                 </div>
 
                 <div class="form-floating mb-4">
-                    <input type="password" class="form-control" id="password" name="password"
-                           placeholder="Password" required>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password"
+                        required>
                     <label for="password"><i class="bi bi-lock me-1"></i>Password</label>
                 </div>
 
@@ -164,9 +182,38 @@
                 <span style="flex:1;border-bottom:1px solid #ddd;"></span>
             </div>
 
-            <a href="{{ auth_url }}" class="btn btn-outline-success w-100" style="border-radius:10px;padding:.65rem;font-size:.95rem;">
-                <i class="bi bi-building me-1"></i> Sign in via Auth Portal (SSO)
-            </a>
+            <!-- SSO Button (toggles employee ID form) -->
+            <button type="button" class="btn btn-outline-success w-100" id="ssoToggleBtn"
+                style="border-radius:10px;padding:.65rem;font-size:.95rem;" onclick="toggleSsoForm()">
+                <i class="bi bi-phone me-1"></i> Sign in via Mobile App
+            </button>
+
+            <!-- SSO Employee ID Form (hidden by default) -->
+            <div id="ssoForm" style="display:none;margin-top:1rem;">
+                <div
+                    style="background:#f0faf4;border:1px solid #c3e6cb;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+                    <p style="margin:0;font-size:.85rem;color:#155724;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Enter your Employee ID. A verification number will be sent to your mobile device.
+                    </p>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="sso_employee_id" placeholder="Employee ID" required>
+                    <label for="sso_employee_id"><i class="bi bi-person-badge me-1"></i>Employee ID</label>
+                </div>
+                <div id="ssoError" class="alert alert-danger d-none" role="alert"></div>
+                <button type="button" class="btn btn-login btn-primary w-100" id="ssoSubmitBtn" onclick="submitSso()">
+                    <span id="ssoText">Send Verification</span>
+                    <span id="ssoSpinner" class="d-none">
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        Sending...
+                    </span>
+                </button>
+                <button type="button" class="btn btn-link w-100 mt-2" style="color:#999;font-size:.85rem;"
+                    onclick="toggleSsoForm()">
+                    Back to password login
+                </button>
+            </div>
         </div>
 
         <div class="login-footer">
@@ -176,7 +223,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function() {
+        document.getElementById('loginForm').addEventListener('submit', function () {
             const btn = document.getElementById('loginBtn');
             const text = document.getElementById('loginText');
             const spinner = document.getElementById('loginSpinner');
@@ -184,6 +231,75 @@
             text.classList.add('d-none');
             spinner.classList.remove('d-none');
         });
+
+        function toggleSsoForm() {
+            const loginForm = document.getElementById('loginForm');
+            const ssoForm = document.getElementById('ssoForm');
+            const ssoBtn = document.getElementById('ssoToggleBtn');
+            const isShowing = ssoForm.style.display !== 'none';
+
+            if (isShowing) {
+                ssoForm.style.display = 'none';
+                loginForm.style.display = 'block';
+                ssoBtn.style.display = 'block';
+                document.getElementById('ssoError').classList.add('d-none');
+            } else {
+                loginForm.style.display = 'none';
+                ssoBtn.style.display = 'none';
+                ssoForm.style.display = 'block';
+                document.getElementById('sso_employee_id').focus();
+            }
+        }
+
+        function submitSso() {
+            const employeeId = document.getElementById('sso_employee_id').value.trim();
+            const errorDiv = document.getElementById('ssoError');
+            const submitBtn = document.getElementById('ssoSubmitBtn');
+            const ssoText = document.getElementById('ssoText');
+            const ssoSpinner = document.getElementById('ssoSpinner');
+
+            errorDiv.classList.add('d-none');
+
+            if (!employeeId) {
+                errorDiv.textContent = 'Please enter your Employee ID';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            ssoText.classList.add('d-none');
+            ssoSpinner.classList.remove('d-none');
+
+            fetch('/login/sso', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'employee_id=' + encodeURIComponent(employeeId)
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        window.location.href = data.redirect;
+                    } else {
+                        errorDiv.textContent = data.error || 'SSO login failed';
+                        errorDiv.classList.remove('d-none');
+                        submitBtn.disabled = false;
+                        ssoText.classList.remove('d-none');
+                        ssoSpinner.classList.add('d-none');
+                    }
+                })
+                .catch(function () {
+                    errorDiv.textContent = 'Connection error. Please try again.';
+                    errorDiv.classList.remove('d-none');
+                    submitBtn.disabled = false;
+                    ssoText.classList.remove('d-none');
+                    ssoSpinner.classList.add('d-none');
+                });
+        }
+
+        document.getElementById('sso_employee_id').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); submitSso(); }
+        });
     </script>
 </body>
+
 </html>

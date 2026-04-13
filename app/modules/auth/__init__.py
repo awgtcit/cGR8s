@@ -7,7 +7,7 @@ import logging
 import os
 from flask import Blueprint, redirect, session, flash, current_app, render_template, request, url_for
 
-from app.sdk.auth_client import validate_token as sdk_validate_token, app_login, create_login_challenge, poll_login_challenge
+from app.sdk.auth_client import validate_token as sdk_validate_token, app_login, create_login_challenge, poll_login_challenge, sso_login, poll_sso_challenge
 
 bp = Blueprint('auth', __name__, template_folder='templates')
 logger = logging.getLogger(__name__)
@@ -79,12 +79,14 @@ def pending_confirmation():
     challenge_id = request.args.get('challenge_id', '')
     challenge_code = request.args.get('challenge_code', '')
     poll_token = request.args.get('poll_token', '')
+    sso = request.args.get('sso', '')
     if not challenge_id:
         return redirect(url_for('auth.login'))
     return render_template('auth/pending_confirmation.html',
                            challenge_id=challenge_id,
                            challenge_code=challenge_code,
-                           poll_token=poll_token)
+                           poll_token=poll_token,
+                           sso=sso)
 
 
 @bp.route('/login/poll/<challenge_id>')
@@ -92,10 +94,15 @@ def poll_challenge(challenge_id):
     """AJAX endpoint — polls login challenge status from Auth API."""
     from flask import jsonify
     poll_token = request.args.get('poll_token', '')
+    sso = request.args.get('sso', '')
     if not poll_token:
         return jsonify({'status': 'ERROR', 'message': 'Missing poll token'}), 400
 
-    result = poll_login_challenge(challenge_id, poll_token=poll_token)
+    # Use SSO poll endpoint for SSO challenges, regular for MFA
+    if sso:
+        result = poll_sso_challenge(challenge_id, poll_token=poll_token)
+    else:
+        result = poll_login_challenge(challenge_id, poll_token=poll_token)
     if not result:
         return jsonify({'status': 'ERROR', 'message': 'Unable to check status'}), 500
 
@@ -106,10 +113,40 @@ def poll_challenge(challenge_id):
         # Validate the launch token and create session
         user_info = sdk_validate_token(result['launch_token'])
         if user_info:
-            _init_sso_session(user_info, method='confirmed')
+            _init_sso_session(user_info, method='sso_confirmed' if sso else 'confirmed')
             response['redirect'] = '/'
 
     return jsonify(response)
+
+
+@bp.route('/login/sso', methods=['POST'])
+def sso_login_route():
+    """Handle SSO login via employee ID — creates challenge, sends push to mobile."""
+    from flask import jsonify
+
+    employee_id = request.form.get('employee_id', '').strip()
+    if not employee_id:
+        return jsonify({'success': False, 'message': 'Please enter your Employee ID.'}), 400
+
+    app_code = current_app.config.get(
+        'AUTH_APP_CODE',
+        os.getenv('AUTH_APP_CODE', 'CGRS'),
+    )
+
+    result = sso_login(employee_id, app_code)
+
+    if result and result.get('challenge_id'):
+        return jsonify({
+            'success': True,
+            'redirect': url_for('auth.pending_confirmation',
+                                challenge_id=result['challenge_id'],
+                                challenge_code=result.get('challenge_code', ''),
+                                poll_token=result.get('poll_token', ''),
+                                sso='1'),
+        })
+
+    error_msg = result.get('message', 'SSO login failed') if result else 'SSO login failed'
+    return jsonify({'success': False, 'message': error_msg}), 400
 
 
 @bp.route('/logout')
