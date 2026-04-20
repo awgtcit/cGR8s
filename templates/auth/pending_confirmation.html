@@ -119,22 +119,12 @@
 
 <body>
     <div class="pending-card" id="pendingCard">
-        {% if sso %}
         <h1><i class="bi bi-phone"></i> Number Verification</h1>
         <p class="status-text">Open your mobile app and tap the matching number</p>
 
         {% if challenge_code %}
         <div class="sso-number" id="codeDisplay">{{ challenge_code }}</div>
         <p style="color:#888;font-size:.85rem;">Select this number on your mobile device</p>
-        {% endif %}
-        {% else %}
-        <h1><i class="bi bi-shield-check"></i> Login Confirmation</h1>
-        <p class="status-text">Please confirm this login on your mobile device.</p>
-
-        {% if challenge_code %}
-        <div class="challenge-code" id="codeDisplay">{{ challenge_code }}</div>
-        <p style="color:#888;font-size:.85rem;">Verify this code matches on your device</p>
-        {% endif %}
         {% endif %}
 
         <div id="statusArea">
