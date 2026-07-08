@@ -417,10 +417,98 @@ Column AA = TP (instead of TISS).
 </tbody>
 {% endmacro %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<style>
+    /* ── Brand-styled calendar (flatpickr) ── */
+    .date-filter-input {
+        width: 150px;
+    }
+
+    .flatpickr-calendar {
+        background: #fff;
+        border: 1px solid var(--cgr-border);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(8, 76, 46, .18);
+        font-family: inherit;
+    }
+
+    .flatpickr-months {
+        background: var(--cgr-primary);
+        border-radius: 8px 8px 0 0;
+        padding: 4px 0;
+    }
+
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-current-month input.cur-year,
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+        color: #fff;
+        fill: #fff;
+        background: transparent;
+    }
+
+    .flatpickr-current-month .flatpickr-monthDropdown-months option {
+        color: var(--cgr-text);
+    }
+
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month {
+        fill: #fff;
+        top: 4px;
+    }
+
+    .flatpickr-months .flatpickr-prev-month:hover svg,
+    .flatpickr-months .flatpickr-next-month:hover svg {
+        fill: var(--cgr-mint);
+    }
+
+    .flatpickr-calendar.arrowTop::before,
+    .flatpickr-calendar.arrowTop::after {
+        border-bottom-color: var(--cgr-primary);
+    }
+
+    .flatpickr-weekdays {
+        background: var(--cgr-primary);
+    }
+
+    span.flatpickr-weekday {
+        background: var(--cgr-primary);
+        color: var(--cgr-mint);
+        font-weight: 600;
+    }
+
+    .flatpickr-day:hover,
+    .flatpickr-day.prevMonthDay:hover,
+    .flatpickr-day.nextMonthDay:hover {
+        background: var(--cgr-mint);
+        border-color: var(--cgr-mint);
+    }
+
+    .flatpickr-day.today {
+        border-color: var(--cgr-secondary);
+    }
+
+    .flatpickr-day.today:hover,
+    .flatpickr-day.today:focus {
+        background: var(--cgr-secondary);
+        border-color: var(--cgr-secondary);
+        color: #fff;
+    }
+
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover,
+    .flatpickr-day.selected:focus {
+        background: var(--cgr-primary);
+        border-color: var(--cgr-primary);
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
 {% block breadcrumb %}
 <a href="{{ url_for('dashboard.index') }}">Home</a>
 <span class="separator">/</span>
-<a href="{{ url_for('qa.index') }}">QA Workflow</a>
+<a href="{{ url_for('qa.index') }}">NPL</a>
 <span class="separator">/</span>
 <span class="current">Data Grid</span>
 {% endblock %}
@@ -988,13 +1076,22 @@ Column AA = TP (instead of TISS).
 <div class="page-header">
     <h2><i class="bi bi-grid-3x3-gap"></i> Data Grid</h2>
     <div style="display:flex;gap:8px;align-items:center">
+        <form method="get" style="display:flex;gap:6px;align-items:center;margin:0">
+            <label for="date_from" style="font-size:0.8rem;color:var(--cgr-text-muted);margin:0">Prod. Date</label>
+            <input type="date" id="date_from" name="date_from" class="form-control form-control-sm date-filter-input"
+                value="{{ date_from.isoformat() if date_from else '' }}">
+            <span style="color:var(--cgr-text-muted)">–</span>
+            <input type="date" name="date_to" class="form-control form-control-sm date-filter-input"
+                value="{{ date_to.isoformat() if date_to else '' }}" aria-label="Prod. date to">
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Apply</button>
+        </form>
         {% if not show_all %}
         <a href="{{ url_for('qa.data_grid', all='1') }}" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrows-angle-expand"></i> Show All
         </a>
         {% else %}
         <a href="{{ url_for('qa.data_grid') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrows-angle-contract"></i> Last 10
+            <i class="bi bi-calendar-week"></i> This Week
         </a>
         {% endif %}
         <a href="{{ url_for('qa.index') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back</a>
@@ -1091,7 +1188,7 @@ Column AA = TP (instead of TISS).
                     %}disabled title="No permission" {% endif %}>
                     <i class="bi bi-clipboard-data"></i> Paste from Excel
                 </button>
-                <span id="prod-count">{{ rows|length }} rows{% if not show_all %} (latest){% endif %}</span>
+                <span id="prod-count">{{ rows|length }} rows</span>
                 <button class="btn-export" onclick="exportCSV('prod-grid', 'production_data')">
                     <i class="bi bi-download"></i> CSV
                 </button>
@@ -1818,4 +1915,18 @@ Column AA = TP (instead of TISS).
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script>
+    document.querySelectorAll('.date-filter-input').forEach(function (el) {
+        flatpickr(el, {
+            dateFormat: 'Y-m-d',   // value submitted to the server
+            altInput: true,        // visible input shows the friendly format
+            altFormat: 'd M Y',    // matches the grid's date display
+            allowInput: true
+        });
+    });
+</script>
 {% endblock %}

@@ -72,7 +72,7 @@ alembic upgrade head
 python run.py
 ```
 
-The application starts on **http://localhost:5050**
+The application starts on **http://localhost:5053** (override with `PORT` in `.env`)
 
 ## Project Structure
 

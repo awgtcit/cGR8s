@@ -162,7 +162,7 @@ def test_sidebar_navigation(page):
         ("Process Orders", "/process-orders", "process_orders"),
         ("Target Weight", "/target-weight", "target_weight"),
         ("NPL Calculation", "/npl", "npl"),
-        ("QA Workflow", "/qa", "qa"),
+        ("NPL", "/qa", "qa"),
         ("Optimizer", "/optimizer", "optimizer"),
         ("FG Codes", "/fg-codes", "fg_codes"),
         ("Master Data", "/master-data", "master_data"),
@@ -448,8 +448,8 @@ def test_npl(page):
 
 
 def test_qa(page):
-    """Test QA Workflow page."""
-    print("\n📄 Testing: QA Workflow")
+    """Test NPL (QA workflow) page."""
+    print("\n📄 Testing: NPL")
     page.goto(f"{BASE_URL}/qa")
     page.wait_for_load_state("networkidle")
 

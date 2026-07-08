@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 import urllib.request
 import urllib.error
 from urllib.parse import urlparse
@@ -35,12 +36,14 @@ _CONFIG_KEYS = [
     'auth_app_url', 'auth_api_key',
     'default_page_size', 'batch_max_workers', 'batch_chunk_size', 'batch_max_retries',
     'company_name', 'report_footer',
+    'qa_notify_emails',
 ]
 
 # Keys that should update environment variables at runtime
 _ENV_MAP = {
     'auth_app_url': 'AUTH_BASE_URL',
     'auth_api_key': 'AUTH_API_KEY',
+    'qa_notify_emails': 'QA_NOTIFY_EMAIL',
 }
 
 
@@ -100,6 +103,15 @@ def update_system_config():
         if key == 'auth_app_url' and value and not _validate_url(value):
             flash('Invalid Auth-App URL format. Must be http:// or https://.', 'error')
             return _embed_redirect('admin.system_config')
+
+        # Validate QA notification emails (comma-separated)
+        if key == 'qa_notify_emails' and value:
+            bad = [e.strip() for e in value.split(',')
+                   if e.strip() and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', e.strip())]
+            if bad:
+                flash(f'Invalid email address(es): {", ".join(bad)}', 'error')
+                return _embed_redirect('admin.system_config')
+            value = ', '.join(e.strip() for e in value.split(',') if e.strip())
 
         existing = repo.get_by_key(key)
         if existing:

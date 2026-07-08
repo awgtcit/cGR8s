@@ -258,6 +258,21 @@ def data_grid():
 
     show_all = request.args.get('all', '0') == '1'
 
+    def _parse_date(arg):
+        try:
+            return datetime.strptime(request.args.get(arg, ''), '%Y-%m-%d').date()
+        except ValueError:
+            return None
+
+    date_from = _parse_date('date_from')
+    date_to = _parse_date('date_to')
+
+    # Default view = current week (Mon–Sun) unless Show All or an explicit range
+    if not show_all and not date_from and not date_to:
+        today = datetime.now().date()
+        date_from = today - timedelta(days=today.weekday())
+        date_to = date_from + timedelta(days=6)
+
     # Fetch ALL orders for QR date lookup (prev production date for same FG)
     all_orders = po_repo.get_all()
     all_orders.sort(key=lambda o: o.process_date or datetime.min, reverse=True)
@@ -268,7 +283,12 @@ def data_grid():
         if o.fg_code_id and o.process_date:
             fg_dates.setdefault(o.fg_code_id, []).append((o.id, o.process_date))
 
-    orders = all_orders if show_all else all_orders[:10]
+    if show_all:
+        orders = all_orders
+    else:
+        orders = [o for o in all_orders if o.process_date
+                  and (not date_from or o.process_date.date() >= date_from)
+                  and (not date_to or o.process_date.date() <= date_to)]
 
     # Build lookups — bulk fetch to avoid N+1 queries
     po_ids = [o.id for o in orders]
@@ -323,6 +343,7 @@ def data_grid():
     # MC and Company options for the paste modal dropdowns
     mc_options = _get_mc_options(g.db)
     return render_template('qa/data_grid.html', rows=rows, show_all=show_all,
+                           date_from=date_from, date_to=date_to,
                            mc_options=mc_options, company_options=COMPANY_OPTIONS)
 
 

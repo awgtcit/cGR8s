@@ -103,7 +103,9 @@ class BaseRepository(Generic[T]):
     # ── Write ─────────────────────────────────────────────────────────────
 
     def create(self, entity: T, user_id: Optional[str] = None) -> T:
-        """Insert a new entity."""
+        """Insert a new entity (accepts a model instance or a dict of column values)."""
+        if isinstance(entity, dict):
+            entity = self.model_class(**entity)
         if not entity.id:
             entity.id = generate_uuid()
         if hasattr(entity, 'created_by') and user_id:
@@ -117,8 +119,24 @@ class BaseRepository(Generic[T]):
         self.session.flush()
         return entity
 
-    def update(self, entity: T, user_id: Optional[str] = None) -> T:
-        """Update an existing entity with concurrency check."""
+    def update(self, entity, data: Optional[Dict[str, Any]] = None,
+               user_id: Optional[str] = None, row_version: Optional[int] = None) -> Optional[T]:
+        """Update an entity.
+
+        Accepts either a model instance, or an entity id + dict of field values
+        (with optional optimistic-concurrency row_version check).
+        """
+        if isinstance(entity, str):
+            obj = self.get_by_id(entity)
+            if obj is None:
+                return None
+            if (row_version is not None and hasattr(obj, 'row_version')
+                    and (obj.row_version or 0) != row_version):
+                from app.utils.errors import ConcurrencyError
+                raise ConcurrencyError()
+            for k, v in (data or {}).items():
+                setattr(obj, k, v)
+            entity = obj
         if hasattr(entity, 'updated_by') and user_id:
             entity.updated_by = user_id
         if hasattr(entity, 'updated_at'):

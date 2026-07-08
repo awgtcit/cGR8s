@@ -735,14 +735,103 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // ── Load on init ──────────────────────────────────
-        loadFgCodes(500, false);
+        // ── Load on init: FG codes produced on the Process Date (default today) ──
+        let dayCodes = null;   // null = fallback full-list mode (MTC unreachable)
+        let dayMissing = [];
+
+        $('#processDate').val(new Date().toISOString().split('T')[0]);
+        loadCodesByDate($('#processDate').val());
+
+        $('#processDate').on('change', function () {
+            const d = $(this).val();
+            if (d) {
+                loadCodesByDate(d);
+                // Re-resolve month-specific N_BLD for the selected FG
+                if (selectedFgCode) loadSkuDetails(selectedFgCode);
+            }
+        });
+
+        // ── Missing monthly blend nicotine popup ──────────
+        const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+
+        function showNicMissingModal(info) {
+            $('#nicMissingBlend').text(info.blend_code || '—');
+            $('#nicMissingMonth').text(MONTH_NAMES[(info.month || 1) - 1] + ' ' + info.year);
+            const ym = info.year + '-' + String(info.month).padStart(2, '0');
+            $('#nicMissingGoBtn').attr('href', '{{ url_for("master_data.blends") }}?nic_month=' + ym);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('nicMissingModal')).show();
+        }
+
+        function loadCodesByDate(dateStr) {
+            $('#listBadge').text('Loading…').removeClass('text-success bg-success').addClass('text-warning bg-warning');
+            $('#fgList').html('<div class="empty-state"><div class="spinner-sm"></div><p class="mt-2">Loading…</p></div>');
+
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_codes_by_date") }}',
+                data: { date: dateStr },
+                success: function (data) {
+                    dayCodes = data.codes;
+                    dayMissing = data.missing || [];
+                    renderList({ codes: dayCodes, loaded_count: data.loaded_count, total_count: data.total_count });
+                    $('#listBadge').text(data.total_count + ' on ' + dateStr).removeClass('text-warning bg-warning').addClass('text-success bg-success');
+                    if (dayMissing.length) showMissingModal(dayMissing, dateStr);
+                },
+                error: function (xhr) {
+                    // MTC DB unreachable → fall back to the full local list
+                    dayCodes = null;
+                    const msg = (xhr.responseJSON && xhr.responseJSON.error) || 'MTC lookup failed';
+                    $('#listBadge').text('MTC offline – full list').removeClass('text-success bg-success text-warning bg-warning').addClass('text-danger bg-danger');
+                    console.warn(msg);
+                    loadFgCodes(500, false);
+                }
+            });
+        }
 
         // ── Search with debounce ──────────────────────────
         $('#searchInput').on('input', function () {
             clearTimeout(searchTimer);
             const q = $(this).val().trim();
-            searchTimer = setTimeout(() => loadFgCodes(500, false, q), 300);
+            searchTimer = setTimeout(function () {
+                if (dayCodes) {
+                    const ql = q.toLowerCase();
+                    const filtered = dayCodes.filter(c =>
+                        !ql || (c.fg_code || '').toLowerCase().includes(ql) || (c.brand || '').toLowerCase().includes(ql));
+                    renderList({ codes: filtered, loaded_count: filtered.length, total_count: dayCodes.length });
+                } else {
+                    loadFgCodes(500, false, q);
+                }
+            }, 300);
+        });
+
+        // ── Missing targets & limits popup ────────────────
+        function showMissingModal(missing, dateStr) {
+            $('#missingFgDate').text(dateStr);
+            $('#missingFgList').html(missing.map(m => '<li><code>' + esc(m) + '</code></li>').join(''));
+            $('#notifyQaStatus').text('');
+            $('#notifyQaBtn').prop('disabled', false).data({ missing: missing, date: dateStr });
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('missingFgModal')).show();
+        }
+
+        $('#notifyQaBtn').on('click', function () {
+            const btn = $(this);
+            btn.prop('disabled', true);
+            $('#notifyQaStatus').text('Sending…');
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_notify_qa") }}',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+                data: JSON.stringify({ missing: btn.data('missing'), date: btn.data('date') }),
+                success: function (data) {
+                    $('#notifyQaStatus').html('<span class="text-success"><i class="bi bi-check-circle"></i> QA notified (' + esc(data.sent_to.join(', ')) + ')</span>');
+                },
+                error: function (xhr) {
+                    const msg = (xhr.responseJSON && xhr.responseJSON.error) || 'Failed to send';
+                    $('#notifyQaStatus').html('<span class="text-danger">' + esc(msg) + '</span>');
+                    btn.prop('disabled', false);
+                }
+            });
         });
 
         function loadFgCodes(limit, loadAll, search) {
@@ -805,12 +894,16 @@
 
             $.ajax({
                 url: '{{ url_for("fg_codes.api_sku_details", fg_code="__CODE__") }}'.replace('__CODE__', code),
+                data: { date: $('#processDate').val() || '' },
                 success: function (data) {
                     skuDetails = data;
                     renderDetails(data);
                     loadKeyVars(data);
                     enableControls();
                     $('#selectedBadge').text(code).removeClass('text-secondary bg-secondary').addClass('text-primary bg-primary');
+                    if (data.n_bld_month && data.n_bld_month.missing) {
+                        showNicMissingModal(data.n_bld_month);
+                    }
                 },
                 error: function () {
                     $('#skuDetailsContent').html('<div class="empty-state" style="min-height:180px"><i class="bi bi-exclamation-triangle text-danger"></i><p>Error loading</p></div>');
@@ -1063,7 +1156,6 @@
         $('#optimizerBtn').click(function () { window.location.href = '{{ url_for("optimizer.index") }}'; });
 
         // ── Inline PO Save ────────────────────────────────
-        $('#processDate').val(new Date().toISOString().split('T')[0]);
         let savedPOId = null;
 
         $('#savePOBtn').click(function () {
@@ -1118,4 +1210,57 @@
         });
     });
 </script>
+
+<!-- Missing monthly blend nicotine modal -->
+<div class="modal fade" id="nicMissingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--cgr-primary);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-droplet-half me-1"></i> Blend Nicotine Missing</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">No nicotine value is saved for blend <strong id="nicMissingBlend"></strong>
+                    in <strong id="nicMissingMonth"></strong>.</p>
+                <p class="text-muted mb-0" style="font-size:0.85rem;">
+                    N_BLD is currently using the latest available fallback value. Update the month's
+                    nicotine on the Blends page for accurate calculations.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <a id="nicMissingGoBtn" href="#" class="btn btn-primary">
+                    <i class="bi bi-droplet-half me-1"></i> Update Blend Nicotine
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Missing targets & limits modal -->
+<div class="modal fade" id="missingFgModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--cgr-primary);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-1"></i> Targets &amp; Limits Missing</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">These FG codes were produced on <strong id="missingFgDate"></strong> (MTC)
+                    but have no targets &amp; limits in cGR8s:</p>
+                <ul id="missingFgList" class="mb-3"></ul>
+                <p class="text-muted mb-0" style="font-size:0.85rem;">
+                    QA must upload the targets &amp; limits before these FG codes can be used.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <span id="notifyQaStatus" class="me-auto" style="font-size:0.85rem;"></span>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="notifyQaBtn" class="btn btn-primary">
+                    <i class="bi bi-envelope me-1"></i> Notify QA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

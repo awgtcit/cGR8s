@@ -20,7 +20,7 @@ def test_all():
         # ── 2. QA Sidebar links to Data Grid ──
         page.goto(BASE)
         page.wait_for_load_state('networkidle')
-        qa_link = page.locator('a.nav-link:has-text("QA Workflow")')
+        qa_link = page.locator('a.nav-link:has(span:text-is("NPL"))')
         href = qa_link.get_attribute('href')
         assert 'data-grid' in href, f'QA sidebar should link to data-grid, got: {href}'
         print(f'[PASS] QA sidebar links to: {href}')
@@ -130,7 +130,7 @@ def test_all():
         # ── 13. QA sidebar click test ──
         page.goto(BASE)
         page.wait_for_load_state('networkidle')
-        qa_link = page.locator('a.nav-link:has-text("QA Workflow")')
+        qa_link = page.locator('a.nav-link:has(span:text-is("NPL"))')
         qa_link.click()
         page.wait_for_load_state('networkidle')
         page.wait_for_timeout(2000)

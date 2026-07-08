@@ -69,6 +69,12 @@
             Internal Use Only')) }}
             {% endcall %}
 
+            {% call form_section('Notifications', 'envelope') %}
+            {{ form_field('qa_notify_emails', 'QA Notification Emails', configs.get('qa_notify_emails', ''),
+            help_text='Comma-separated email addresses that receive the "missing targets & limits" notification
+            from the FG Codes page. Leave empty to disable.') }}
+            {% endcall %}
+
             <div class="form-actions" style="border-top: none; margin-top: 0;">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Configuration</button>
             </div>

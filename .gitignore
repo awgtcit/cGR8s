@@ -57,3 +57,11 @@ migrations/versions/__pycache__/
 
 # ── Misc ─────────────────────────────────────────────────
 .workspace-secure-bootstrap.json
+
+# ── Local tooling / agent config (not app code) ──────────
+.claude/
+.github/.sap-adt-version.json
+.github/agents/
+.github/skills/
+.github/instructions/kluster-code-verify.instructions.md
+AGENTS.md
