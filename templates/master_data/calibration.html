@@ -32,7 +32,7 @@
                         <th>FG Code</th>
                         <th>Alpha (α)</th>
                         <th>Beta (β)</th>
-                        <th>Gamma (γ)</th>
+                        {# Gamma hidden — it comes from the Gamma Constants tab #}
                         <th>Delta (δ)</th>
                         <th>N Target</th>
                         <th>Actions</th>
@@ -44,7 +44,6 @@
                         <td><strong>{{ c.fg_code_rel.fg_code if c.fg_code_rel else '—' }}</strong></td>
                         <td>{{ c.alpha if c.alpha is not none else '—' }}</td>
                         <td>{{ c.beta if c.beta is not none else '—' }}</td>
-                        <td>{{ c.gamma if c.gamma is not none else '—' }}</td>
                         <td>{{ c.delta if c.delta is not none else '—' }}</td>
                         <td>{{ c.n_tgt if c.n_tgt is not none else '—' }}</td>
                         <td>

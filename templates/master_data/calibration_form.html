@@ -45,11 +45,8 @@
                     type='number', step='0.000001', required=true, errors=errors) }}
                 </div>
             </div>
+            {# Gamma hidden — maintained in the Gamma Constants tab #}
             <div class="row">
-                <div class="col-md-6">
-                    {{ form_field('gamma', 'Gamma (γ)', data.get('gamma', constant.gamma if constant else ''),
-                    type='number', step='0.000001', required=true, errors=errors) }}
-                </div>
                 <div class="col-md-6">
                     {{ form_field('delta', 'Delta (δ)', data.get('delta', constant.delta if constant else ''),
                     type='number', step='0.000001', required=true, errors=errors) }}

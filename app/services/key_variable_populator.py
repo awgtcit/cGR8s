@@ -34,8 +34,13 @@ class KeyVariablePopulator:
     def __init__(self, session):
         self.session = session
 
-    def get_defaults(self, fg) -> dict:
-        """Return a dict of default key variables for the given FGCode entity."""
+    def get_defaults(self, fg, process_date=None) -> dict:
+        """Return a dict of default key variables for the given FGCode entity.
+
+        process_date (datetime.date, optional): when given, N_BLD prefers the
+        tobacco_blend_analysis value saved for that month; the returned
+        'n_bld_month_missing' flag says whether that month had no saved value.
+        """
         from app.repositories import (
             FormulaConstantRepository, GammaConstantRepository,
             KeyVariableRepository, LookupRepository, SKURepository,
@@ -64,8 +69,17 @@ class KeyVariablePopulator:
         gamma_val = self._get_gamma(fg, n_tgt)
         result['gamma'] = gamma_val
 
-        # ── N_BLD cascade ────────────────────────────────────────
-        result['n_bld'] = self._get_n_bld(fg)
+        # ── N_BLD: month value for the process date first, then cascade ──
+        month_val = None
+        if process_date is not None and fg.blend_code:
+            tba_repo = TobaccoBlendAnalysisRepository(self.session)
+            blend = BlendMasterRepository(self.session).get_by_blend_code(fg.blend_code)
+            keys = [fg.blend_code] + ([blend.blend_name.strip()] if blend and blend.blend_name else [])
+            rec = tba_repo.get_month_value(keys, process_date.year, process_date.month)
+            if rec and rec.nic_dry is not None:
+                month_val = round(float(rec.nic_dry), 4)
+        result['n_bld'] = month_val if month_val is not None else self._get_n_bld(fg)
+        result['n_bld_month_missing'] = process_date is not None and month_val is None
 
         # ── P_CU from Size/CU lookup ────────────────────────────
         result['p_cu'] = self._get_p_cu(fg)
@@ -200,11 +214,12 @@ class KeyVariablePopulator:
         if blend and blend.n_bld:
             return float(blend.n_bld)
 
-        # 3) Latest TobaccoBlendAnalysis.nic_dry for matching blend_name
+        # 3) Latest TobaccoBlendAnalysis.nic_dry — blend_name column holds a code or a name
         from app.models.tobacco_blend_analysis import TobaccoBlendAnalysis
+        keys = [blend_code] + ([blend.blend_name.strip()] if blend and blend.blend_name else [])
         tba = (
             self.session.query(TobaccoBlendAnalysis)
-            .filter(TobaccoBlendAnalysis.blend_name == blend_code)
+            .filter(TobaccoBlendAnalysis.blend_name.in_(keys))
             .order_by(
                 TobaccoBlendAnalysis.period_year.desc(),
                 TobaccoBlendAnalysis.period_month.desc(),

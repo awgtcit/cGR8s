@@ -514,6 +514,37 @@ class TobaccoBlendAnalysisRepository(BaseRepository[TobaccoBlendAnalysis]):
             TobaccoBlendAnalysis.period_month
         ).all()
 
+    def get_by_period(self, year: int, month: int) -> dict:
+        """All rows for a month, keyed by the blend_name column (holds a code OR a name)."""
+        rows = self._base_query().filter(
+            TobaccoBlendAnalysis.period_year == year,
+            TobaccoBlendAnalysis.period_month == month
+        ).all()
+        return {r.blend_name: r for r in rows}
+
+    @staticmethod
+    def _keys(blend_key):
+        return [blend_key] if isinstance(blend_key, str) else [k for k in blend_key if k]
+
+    def get_month_value(self, blend_key, year: int, month: int):
+        """blend_key: a blend code/name or list of them (blend_name holds either)."""
+        return self._base_query().filter(
+            TobaccoBlendAnalysis.blend_name.in_(self._keys(blend_key)),
+            TobaccoBlendAnalysis.period_year == year,
+            TobaccoBlendAnalysis.period_month == month
+        ).first()
+
+    def get_latest_before(self, blend_key, year: int, month: int):
+        """Most recent record for the blend (code/name or list) at or before (year, month)."""
+        return self._base_query().filter(
+            TobaccoBlendAnalysis.blend_name.in_(self._keys(blend_key)),
+            (TobaccoBlendAnalysis.period_year * 100 + TobaccoBlendAnalysis.period_month)
+            <= year * 100 + month
+        ).order_by(
+            TobaccoBlendAnalysis.period_year.desc(),
+            TobaccoBlendAnalysis.period_month.desc()
+        ).first()
+
 
 class FormulaConstantRepository(BaseRepository[FormulaConstant]):
     def __init__(self, session=None):

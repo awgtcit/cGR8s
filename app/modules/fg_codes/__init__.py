@@ -1,4 +1,9 @@
 """Enhanced FG Codes module - VB Application style interface."""
+import os
+import smtplib
+from datetime import datetime
+from email.message import EmailMessage
+
 from flask import Blueprint, render_template, request, redirect, url_for, g, jsonify, session
 from app.auth.decorators import require_auth, require_permission
 from app.config.constants import Permissions
@@ -54,6 +59,135 @@ def api_load_codes():
     return jsonify(result)
 
 
+def _mtc_connect():
+    import pyodbc
+    conn_str = (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        f"SERVER={os.getenv('MTC_DB_SERVER', '162.20.20.250')};"
+        f"DATABASE={os.getenv('MTC_DB_NAME', 'mtc')};"
+        f"UID={os.getenv('MTC_DB_USER', '')};"
+        f"PWD={os.getenv('MTC_DB_PASSWORD', '')};"
+        "TrustServerCertificate=yes;"
+    )
+    return pyodbc.connect(conn_str, timeout=5)
+
+
+def _fetch_mtc_brandcodes(date_str):
+    """Query the external MTC production DB for brandcodes produced on a date."""
+    with _mtc_connect() as cn:
+        cur = cn.cursor()
+        cur.execute(
+            """SELECT brands.brandcode
+               FROM tabfinishgoods
+               INNER JOIN brands ON tabfinishgoods.brandid = brands.id
+               WHERE tabfinishgoods.date = ? AND brands.brandcode <> '00000000.00'
+               ORDER BY tabfinishgoods.id DESC""",
+            date_str,
+        )
+        seen, codes = set(), []
+        for (bc,) in cur.fetchall():
+            bc = (bc or '').strip()
+            if bc and bc not in seen:
+                seen.add(bc)
+                codes.append(bc)
+        return codes
+
+
+def fetch_mtc_month_brandcode_dates(year, month):
+    """{brandcode: last production date 'YYYY-MM-DD'} for a month (external MTC DB)."""
+    start = f'{year:04d}-{month:02d}-01'
+    end = f'{year + 1:04d}-01-01' if month == 12 else f'{year:04d}-{month + 1:02d}-01'
+    with _mtc_connect() as cn:
+        cur = cn.cursor()
+        cur.execute(
+            """SELECT brands.brandcode, MAX(tabfinishgoods.date)
+               FROM tabfinishgoods
+               INNER JOIN brands ON tabfinishgoods.brandid = brands.id
+               WHERE tabfinishgoods.date >= ? AND tabfinishgoods.date < ?
+                 AND brands.brandcode <> '00000000.00'
+               GROUP BY brands.brandcode""",
+            start, end,
+        )
+        return {(bc or '').strip(): str(d)[:10]
+                for bc, d in cur.fetchall() if (bc or '').strip() and d}
+
+
+@bp.route('/api/codes-by-date')
+@require_auth
+@require_permission(Permissions.FG_CODE_VIEW)
+def api_codes_by_date():
+    """FG codes produced on a date (from external MTC DB), matched against local fg_codes."""
+    date_str = request.args.get('date', '').strip()
+    try:
+        datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date (expected YYYY-MM-DD)'}), 400
+
+    try:
+        brandcodes = _fetch_mtc_brandcodes(date_str)
+    except Exception as e:
+        return jsonify({'error': f'MTC database unreachable: {e}'}), 502
+
+    repo = FGCodeRepository(g.db)
+    codes, missing = [], []
+    for bc in brandcodes:
+        fg = repo.get_by_code(bc)
+        if fg:
+            codes.append({'id': fg.id, 'fg_code': fg.fg_code, 'brand': fg.brand, 'format': fg.format})
+        else:
+            missing.append(bc)
+
+    return jsonify({'date': date_str, 'codes': codes, 'missing': missing,
+                    'total_count': len(brandcodes), 'loaded_count': len(codes)})
+
+
+@bp.route('/api/notify-qa', methods=['POST'])
+@require_auth
+@require_permission(Permissions.FG_CODE_VIEW)
+def api_notify_qa():
+    """Email QA the FG codes that were produced but have no targets & limits in cGR8s."""
+    data = request.get_json() or {}
+    missing = [str(m).strip() for m in (data.get('missing') or []) if str(m).strip()]
+    date_str = str(data.get('date', '')).strip()
+    if not missing:
+        return jsonify({'error': 'No missing FG codes supplied'}), 400
+
+    host = os.getenv('SMTP_HOST', '')
+    # Recipients: admin System Config is authoritative once set; .env only before first save
+    from app.repositories import SystemConfigRepository
+    cfg = SystemConfigRepository(g.db).get_by_key('qa_notify_emails')
+    raw = cfg.config_value or '' if cfg is not None else os.getenv('QA_NOTIFY_EMAIL', '')
+    recipients = [r.strip() for r in raw.split(',') if r.strip()]
+    if not host or not recipients:
+        return jsonify({'error': 'Email not configured: set QA Notification Emails in Admin > System Config'}), 503
+
+    msg = EmailMessage()
+    msg['Subject'] = f'cGR8s: {len(missing)} FG code(s) missing targets & limits ({date_str})'
+    msg['From'] = os.getenv('SMTP_FROM', 'cgr8s@awgtc.com')
+    msg['To'] = ', '.join(recipients)
+    msg.set_content(
+        f'The following FG codes were produced on {date_str} (MTC) but have no '
+        f'targets & limits in cGR8s:\n\n'
+        + '\n'.join(f'  - {m}' for m in missing)
+        + '\n\nPlease upload the targets & limits in cGR8s: Master Data > Targets & Limits.\n'
+        + f'\nRequested by: {getattr(g, "user_email", "") or "unknown"}'
+    )
+    try:
+        with smtplib.SMTP(host, int(os.getenv('SMTP_PORT', '25')), timeout=10) as s:
+            if os.getenv('SMTP_USER'):
+                s.starttls()
+                s.login(os.getenv('SMTP_USER'), os.getenv('SMTP_PASSWORD', ''))
+            s.send_message(msg)
+    except Exception as e:
+        return jsonify({'error': f'Email send failed: {e}'}), 502
+
+    AuditLogger.log(AuditAction.CREATE, 'QANotification', entity_id=None,
+                    after_value={'date': date_str, 'missing': missing, 'to': recipients},
+                    module='fg_codes')
+    g.db.commit()
+    return jsonify({'success': True, 'sent_to': recipients})
+
+
 @bp.route('/api/sku-details/<fg_code>')
 @require_auth
 @require_permission(Permissions.FG_CODE_VIEW)
@@ -65,8 +199,15 @@ def api_sku_details(fg_code):
     if not fg:
         return jsonify({'error': 'FG Code not found'}), 404
 
+    # Optional process date → month-specific N_BLD
+    process_date = None
+    try:
+        process_date = datetime.strptime(request.args.get('date', ''), '%Y-%m-%d').date()
+    except ValueError:
+        pass
+
     # Get key variables for this FG code
-    key_vars = get_key_variables(fg_code)
+    key_vars = get_key_variables(fg_code, process_date)
 
     # Get calibration constants
     calibration = get_calibration_constants(fg_code)
@@ -145,7 +286,13 @@ def api_sku_details(fg_code):
         },
         'key_variables': key_vars,
         'calibration': calibration,
-        'last_run_date': last_run.strftime('%Y-%m-%d') if last_run else None
+        'last_run_date': last_run.strftime('%Y-%m-%d') if last_run else None,
+        'n_bld_month': {
+            'missing': key_vars.pop('n_bld_month_missing', False),
+            'blend_code': fg.blend_code,
+            'year': process_date.year if process_date else None,
+            'month': process_date.month if process_date else None,
+        },
     }
 
     return jsonify(result)
@@ -287,7 +434,7 @@ def api_create_process_order():
     return jsonify({'success': True, 'process_order_id': po.id})
 
 
-def get_key_variables(fg_code):
+def get_key_variables(fg_code, process_date=None):
     """Get auto-populated key variables for FG code using KeyVariablePopulator."""
     from flask import g
     from app.services.key_variable_populator import KeyVariablePopulator
@@ -295,10 +442,11 @@ def get_key_variables(fg_code):
     repo = FGCodeRepository(g.db)
     fg = repo.get_by_code(fg_code)
     if not fg:
-        return {'n_bld': 0.0, 'p_cu': 0.0, 't_vnt': 0.0, 'f_pd': 0.0, 'm_ip': 0.0}
+        return {'n_bld': 0.0, 'p_cu': 0.0, 't_vnt': 0.0, 'f_pd': 0.0, 'm_ip': 0.0,
+                'n_bld_month_missing': False}
 
     populator = KeyVariablePopulator(g.db)
-    defaults = populator.get_defaults(fg)
+    defaults = populator.get_defaults(fg, process_date=process_date)
 
     return {
         'n_bld': defaults.get('n_bld', 0.0),
@@ -306,6 +454,7 @@ def get_key_variables(fg_code):
         't_vnt': defaults.get('t_vnt', 0.0),
         'f_pd': defaults.get('f_pd', 0.0),
         'm_ip': defaults.get('m_ip', 0.0),
+        'n_bld_month_missing': defaults.get('n_bld_month_missing', False),
     }
 
 

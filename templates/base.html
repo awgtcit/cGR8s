@@ -84,7 +84,7 @@
                         <a class="nav-link {% if request.blueprint == 'qa' %}active{% endif %}"
                             href="{{ url_for('qa.data_grid') }}">
                             <i class="bi bi-shield-check"></i>
-                            <span>QA Workflow</span>
+                            <span>NPL</span>
                         </a>
                     </li>
                     {% endif %}
@@ -138,29 +138,41 @@
                                         href="{{ url_for('master_data.blends') }}"><i
                                             class="bi bi-diagram-3"></i><span>Blends</span></a></li>
                                 {% endif %}
-                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.MACHINES') %}
-                                <li class="nav-item"><a
-                                        class="nav-link {% if request.endpoint == 'master_data.machines' %}active{% endif %}"
-                                        href="{{ url_for('master_data.machines') }}"><i
-                                            class="bi bi-gear-wide-connected"></i><span>Machines</span></a></li>
-                                {% endif %}
                                 {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.SKUS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.skus' %}active{% endif %}"
                                         href="{{ url_for('master_data.skus') }}"><i
                                             class="bi bi-box-seam"></i><span>SKUs</span></a></li>
                                 {% endif %}
-                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.TOBACCO_ANALYSIS') %}
-                                <li class="nav-item"><a
-                                        class="nav-link {% if request.endpoint == 'master_data.tobacco_blend_analysis' %}active{% endif %}"
-                                        href="{{ url_for('master_data.tobacco_blend_analysis') }}"><i
-                                            class="bi bi-graph-up"></i><span>Tobacco Analysis</span></a></li>
-                                {% endif %}
                                 {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.TARGETS_LIMITS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.targets_limits' %}active{% endif %}"
                                         href="{{ url_for('master_data.targets_limits') }}"><i
                                             class="bi bi-bullseye"></i><span>Targets &amp; Limits</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.CALIBRATION') %}
+                                <li class="nav-item"><a
+                                        class="nav-link {% if request.endpoint == 'master_data.calibration' %}active{% endif %}"
+                                        href="{{ url_for('master_data.calibration') }}"><i
+                                            class="bi bi-bullseye"></i><span>Calibration</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.GAMMA_CONSTANTS') %}
+                                <li class="nav-item"><a
+                                        class="nav-link {% if request.endpoint == 'master_data.gamma_constants' %}active{% endif %}"
+                                        href="{{ url_for('master_data.gamma_constants') }}"><i
+                                            class="bi bi-sliders"></i><span>Gamma Constants</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.MACHINES') %}
+                                <li class="nav-item"><a
+                                        class="nav-link {% if request.endpoint == 'master_data.machines' %}active{% endif %}"
+                                        href="{{ url_for('master_data.machines') }}"><i
+                                            class="bi bi-gear-wide-connected"></i><span>Machines</span></a></li>
+                                {% endif %}
+                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.TOBACCO_ANALYSIS') %}
+                                <li class="nav-item"><a
+                                        class="nav-link {% if request.endpoint == 'master_data.tobacco_blend_analysis' %}active{% endif %}"
+                                        href="{{ url_for('master_data.tobacco_blend_analysis') }}"><i
+                                            class="bi bi-graph-up"></i><span>Tobacco Analysis</span></a></li>
                                 {% endif %}
                                 {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.SIZE_CU') %}
                                 <li class="nav-item"><a
@@ -192,23 +204,11 @@
                                         href="{{ url_for('master_data.lookups') }}"><i
                                             class="bi bi-list-ul"></i><span>Lookups</span></a></li>
                                 {% endif %}
-                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.CALIBRATION') %}
-                                <li class="nav-item"><a
-                                        class="nav-link {% if request.endpoint == 'master_data.calibration' %}active{% endif %}"
-                                        href="{{ url_for('master_data.calibration') }}"><i
-                                            class="bi bi-bullseye"></i><span>Calibration</span></a></li>
-                                {% endif %}
                                 {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.FORMULA_CONSTANTS') %}
                                 <li class="nav-item"><a
                                         class="nav-link {% if request.endpoint == 'master_data.formula_constants' %}active{% endif %}"
                                         href="{{ url_for('master_data.formula_constants') }}"><i
                                             class="bi bi-calculator"></i><span>Formula Constants</span></a></li>
-                                {% endif %}
-                                {% if has_perm('MASTER_DATA.VIEW') or has_perm('MASTER_DATA.GAMMA_CONSTANTS') %}
-                                <li class="nav-item"><a
-                                        class="nav-link {% if request.endpoint == 'master_data.gamma_constants' %}active{% endif %}"
-                                        href="{{ url_for('master_data.gamma_constants') }}"><i
-                                            class="bi bi-sliders"></i><span>Gamma Constants</span></a></li>
                                 {% endif %}
                             </ul>
                         </div>

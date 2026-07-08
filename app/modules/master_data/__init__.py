@@ -29,12 +29,7 @@ def index():
 @require_auth
 @require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_BLENDS)
 def blends():
-    page, per_page = paginate_args(request.args)
-    repo = BlendMasterRepository(g.db)
-    result = repo.get_paginated(page=page, per_page=per_page,
-                                search=request.args.get('q', ''),
-                                search_fields=['blend_code', 'blend_name'])
-    return render_template('master_data/blends.html', **result)
+    return render_template('master_data/blends.html')
 
 
 @bp.route('/blends/create', methods=['GET', 'POST'])
@@ -70,6 +65,157 @@ def blend_edit(id):
         return redirect(url_for('master_data.blends'))
     data = {c.name: getattr(blend, c.name) for c in blend.__table__.columns}
     return render_template('master_data/blend_form.html', data=data, errors=[], blend=blend)
+
+
+# ── Monthly Blend Nicotine (tobacco_blend_analysis) ─────────────────────
+
+NIC_WET_FACTOR = 0.875  # Nicotine % Wet = Nicotine % Dry (N_BLD) * 0.875
+
+
+def _nic_editable_months():
+    """The two editable periods: (current, previous) as (year, month) tuples."""
+    from datetime import date
+    today = date.today()
+    cur = (today.year, today.month)
+    prev = (today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1)
+    return cur, prev
+
+
+def _blend_last_used(year, month):
+    """{blend_code: last MTC production date in the month}; {} if MTC unreachable."""
+    from app.models.fg_code import FGCode
+    from app.modules.fg_codes import fetch_mtc_month_brandcode_dates
+    try:
+        bc_dates = fetch_mtc_month_brandcode_dates(year, month)
+    except Exception:
+        return {}  # ponytail: MTC offline → no dates, table falls back to code order
+    if not bc_dates:
+        return {}
+    fg_blend = dict(g.db.query(FGCode.fg_code, FGCode.blend_code).filter(
+        FGCode.is_deleted == False,  # noqa: E712
+        FGCode.blend_code.isnot(None), FGCode.blend_code != ''
+    ).all())
+    last = {}
+    for bc, d in bc_dates.items():
+        blend = fg_blend.get(bc)
+        if blend and d > last.get(blend, ''):
+            last[blend] = d
+    return last
+
+
+@bp.route('/blends/nicotine')
+@require_auth
+@require_any_permissions(Permissions.MASTER_DATA_VIEW, Permissions.MASTER_DATA_BLENDS)
+def blends_nicotine():
+    """All blends with monthly nicotine values; blends produced in the month (MTC) carry last_used."""
+    try:
+        year, month = int(request.args.get('year', 0)), int(request.args.get('month', 0))
+    except ValueError:
+        return jsonify({'error': 'Invalid year/month'}), 400
+    if not (1 <= month <= 12):
+        return jsonify({'error': 'Invalid month'}), 400
+
+    from app.models.blend_master import BlendMaster
+    repo = TobaccoBlendAnalysisRepository(g.db)
+    saved = repo.get_by_period(year, month)
+    last_used = _blend_last_used(year, month)
+
+    from app.models.fg_code import FGCode
+    blends = g.db.query(BlendMaster).filter(BlendMaster.is_deleted == False).all()  # noqa: E712
+    known = {b.blend_code for b in blends}
+    # FG-referenced blend codes missing from Blend Master still get a row (id-less);
+    # name/GTIN fall back to what the FG code carries
+    orphans = {}
+    for c, nm, gt in g.db.query(FGCode.blend_code, FGCode.blend, FGCode.blend_gtin).filter(
+        FGCode.is_deleted == False,  # noqa: E712
+        FGCode.blend_code.isnot(None), FGCode.blend_code != ''
+    ).distinct().all():
+        if c not in known:
+            cur = orphans.setdefault(c, {'name': None, 'gtin': None})
+            cur['name'] = cur['name'] or (nm or '').strip() or None
+            cur['gtin'] = cur['gtin'] or gt
+
+    rows = []
+    for code, b in [(b.blend_code, b) for b in blends] + [(c, None) for c in orphans]:
+        name = (b.blend_name if b else orphans[code]['name']) or None
+        # tobacco_blend_analysis.blend_name holds a code or a tobacco name — match both
+        keys = [code, (name or '').strip() or None]
+        rec = saved.get(keys[0]) or (saved.get(keys[1]) if keys[1] else None)
+        prev = None if rec else repo.get_latest_before(keys, year, month)
+        src = rec or prev
+        rows.append({
+            'id': b.id if b else None, 'blend_code': code,
+            'blend_name': name,
+            'gtin': b.blend_gtin if b else orphans[code]['gtin'],
+            'is_active': b.is_active if b else True,
+            'last_used': last_used.get(code),
+            'nic_dry': src.nic_dry if src else None,
+            'nic_wet': src.nic_wet if src else None,
+            'dispatch_moisture': src.dispatch_moisture if src else None,
+            'saved': bool(rec),
+        })
+    # Used-this-month first, most recent date first; then the rest by blend code
+    rows.sort(key=lambda r: r['blend_code'] or '')
+    rows.sort(key=lambda r: r['last_used'] or '', reverse=True)
+    return jsonify({'year': year, 'month': month, 'rows': rows})
+
+
+@bp.route('/blends/nicotine', methods=['POST'])
+@require_auth
+@require_any_permissions(Permissions.MASTER_DATA_EDIT, Permissions.MASTER_DATA_BLENDS)
+def blends_nicotine_save():
+    """Upsert monthly nicotine values. Only the current and previous month are editable."""
+    data = request.get_json() or {}
+    try:
+        year, month = int(data.get('year', 0)), int(data.get('month', 0))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid year/month'}), 400
+    if (year, month) not in _nic_editable_months():
+        return jsonify({'error': 'Only the current and previous month can be updated'}), 400
+
+    from app.models.blend_master import BlendMaster
+    from app.models.fg_code import FGCode
+    code_to_name = {b.blend_code: (b.blend_name or '').strip()
+                    for b in g.db.query(BlendMaster).filter(BlendMaster.is_deleted == False).all()}  # noqa: E712
+    # blend codes missing from Blend Master: use the name the FG code carries
+    for c, nm in g.db.query(FGCode.blend_code, FGCode.blend).filter(
+        FGCode.is_deleted == False,  # noqa: E712
+        FGCode.blend_code.isnot(None), FGCode.blend_code != ''
+    ).distinct().all():
+        if c and (nm or '').strip() and not code_to_name.get(c):
+            code_to_name[c] = nm.strip()
+
+    repo = TobaccoBlendAnalysisRepository(g.db)
+    created = updated = 0
+    for row in data.get('rows') or []:
+        code = str(row.get('blend_code', '')).strip()
+        try:
+            nic_dry = float(row['nic_dry'])
+        except (KeyError, ValueError, TypeError):
+            continue  # rows without a valid dry value are skipped
+        try:
+            moisture = float(row.get('dispatch_moisture')) if row.get('dispatch_moisture') not in (None, '') else None
+        except (ValueError, TypeError):
+            moisture = None
+
+        values = {'nic_dry': nic_dry, 'nic_wet': nic_dry * NIC_WET_FACTOR,
+                  'dispatch_moisture': moisture}
+        # Values are per tobacco name — store under the name so all codes sharing it match
+        name = code_to_name.get(code) or code
+        existing = repo.get_month_value([code, name], year, month)
+        if existing:
+            repo.update(existing.id, values)
+            updated += 1
+        else:
+            repo.create({'blend_name': name, 'period_year': year, 'period_month': month,
+                         'is_active': True, **values})
+            created += 1
+
+    g.db.commit()
+    AuditLogger.log(AuditAction.UPDATE, 'TobaccoBlendAnalysis', entity_id=None,
+                    after_value={'year': year, 'month': month, 'created': created, 'updated': updated},
+                    module='master_data')
+    return jsonify({'success': True, 'created': created, 'updated': updated})
 
 
 # ── Physical Parameters ──────────────────────────────────────────────────
@@ -634,6 +780,149 @@ def app_fields():
 
 
 # ── Targets & Limits ─────────────────────────────────────────────────────
+
+# Excel header (normalized: ':' stripped, whitespace collapsed, lowercased) → (FGCode field, type)
+_TL_FIELD_MAP = {
+    'cig code': ('cig_code', str), 'blend code': ('blend_code', str),
+    'filter code': ('filter_code', str), 'blend': ('blend', str), 'brand': ('brand', str),
+    'format': ('format', str), 'family name': ('family_name', str),
+    'fg gtin': ('fg_gtin', str), 'blend gtin': ('blend_gtin', str),
+    'circumference mean': ('circumference_mean', float),
+    'circumference mean ul': ('circumference_mean_ul', float),
+    'circumference mean ll': ('circumference_mean_ll', float),
+    'circumference sd max limits': ('circumference_sd_max', float),
+    'cig. pdo': ('cig_pdo', float), 'cig. pdo ul': ('cig_pdo_ul', float),
+    'cig. pdo ll': ('cig_pdo_ll', float),
+    'tip ventilation (vf)': ('tip_ventilation', float),
+    'tip ventilation (vf) ul': ('tip_ventilation_ul', float),
+    'tip ventilation (vf) ll': ('tip_ventilation_ll', float),
+    'tip ventilation (vf) sd max limit': ('tip_ventilation_sd_max', float),
+    'rod length': ('tobacco_rod_length', float), 'cig length': ('cig_length', float),
+    'ntm wt. mean': ('ntm_wt_mean', float), 'cig wt. sd max limit': ('cig_wt_sd_max', float),
+    'filter pd': ('filter_pd', float), 'filter pd ul': ('filter_pd_ul', float),
+    'filter pd ll': ('filter_pd_ll', float),
+    'cig. hardness': ('cig_hardness', float), 'cig. hardness ul': ('cig_hardness_ul', float),
+    'cig. hardness ll': ('cig_hardness_ll', float),
+    'cig. corrected hardness': ('cig_corrected_hardness', float),
+    'loose shorts mg/end max limits': ('loose_shorts_max', float),
+    'no. of cut': ('c_plg', int), 'pluglength': ('plug_length', float),
+    'filter weight': ('filter_weight', float),
+    'c48 moisture': ('c48_moisture', float), 'c48 moisture ul': ('c48_moisture_ul', float),
+    'c48 moisture ll': ('c48_moisture_ll', float),
+    'maker moisture': ('maker_moisture', float), 'maker moisture ul': ('maker_moisture_ul', float),
+    'maker moisture ll': ('maker_moisture_ll', float),
+    'pack ov': ('pack_ov', float), 'pack ov ul': ('pack_ov_ul', float),
+    'pack ov ll': ('pack_ov_ll', float),
+    'ssi': ('ssi', float), 'ssi ul': ('ssi_ul', float), 'ssi ll': ('ssi_ll', float),
+    'lamina cpi': ('lamina_cpi', float),
+    'filling power': ('filling_power', float), 'filling power ul': ('filling_power_ul', float),
+    'filling power ll': ('filling_power_ll', float),
+    'pan % max limit': ('pan_pct_max', float),
+    'filter desc': ('filter_desc', str), 'plug wrap cu': ('plug_wrap_cu', float),
+    'tow': ('tow_used', str), 'target nic': ('target_nic', float),
+}
+
+
+def _tl_norm(h):
+    """Normalize an Excel header: drop colons, collapse whitespace/newlines, lowercase."""
+    return ' '.join(str(h).replace(':', ' ').split()).lower() if h is not None else ''
+
+
+def _tl_code(v):
+    """FG code cell → canonical 'NNNNNNNN.NN' string (Excel stores codes as floats)."""
+    if v is None:
+        return ''
+    if isinstance(v, (int, float)):
+        return '%.2f' % v
+    return str(v).strip()
+
+
+@bp.route('/targets-limits/upload', methods=['POST'])
+@require_auth
+@require_any_permissions(Permissions.MASTER_DATA_EDIT, Permissions.MASTER_DATA_TARGETS_LIMITS)
+def targets_limits_upload():
+    """Upload a Targets & Limits Excel file and upsert fg_codes rows by FG code."""
+    import openpyxl
+
+    f = request.files.get('file')
+    if not f or not f.filename or not f.filename.lower().endswith(('.xlsx', '.xlsm')):
+        flash_error('Please choose an .xlsx or .xlsm file')
+        return redirect(url_for('master_data.targets_limits'))
+
+    try:
+        wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
+    except Exception as e:
+        flash_error(f'Could not read Excel file: {e}')
+        return redirect(url_for('master_data.targets_limits'))
+
+    sheet = next((s for s in ('Target & Limits for CGR8S', 'Targets & Limits') if s in wb.sheetnames),
+                 wb.sheetnames[0])
+    ws = wb[sheet]
+    rows = ws.iter_rows(values_only=True)
+    try:
+        headers = next(rows)
+    except StopIteration:
+        flash_error('The sheet is empty')
+        return redirect(url_for('master_data.targets_limits'))
+
+    col = {_tl_norm(h): i for i, h in enumerate(headers) if h is not None}
+    if 'fg code' not in col:
+        flash_error(f'No "FG Code:" column found in sheet "{sheet}"')
+        return redirect(url_for('master_data.targets_limits'))
+
+    repo = FGCodeRepository(g.db)
+    created = updated = skipped = 0
+    errors = []
+
+    for rownum, row in enumerate(rows, start=2):
+        code = _tl_code(row[col['fg code']])
+        if not code or code.lower() in ('none', 'nan'):
+            skipped += 1
+            continue
+
+        data = {}
+        for header, (field, typ) in _TL_FIELD_MAP.items():
+            idx = col.get(header)
+            if idx is None or idx >= len(row):
+                continue
+            v = row[idx]
+            if v is None or (isinstance(v, str) and (not v.strip() or v.strip().startswith('#'))):
+                continue  # blank or Excel error value → keep existing
+            try:
+                data[field] = typ(v) if typ is not str else str(v).strip()
+            except (ValueError, TypeError):
+                continue
+
+        # ponytail: legacy rows imported via str(float) may store '.10' codes as '.1'
+        fg = repo.get_by_code(code) or (code.endswith('0') and repo.get_by_code(code[:-1])) or None
+        try:
+            if fg:
+                for field, value in data.items():
+                    setattr(fg, field, value)
+                updated += 1
+            else:
+                data['fg_code'] = code
+                data['is_active'] = True
+                repo.create(data)
+                created += 1
+        except Exception as e:
+            errors.append(f'Row {rownum} ({code}): {e}')
+            if len(errors) >= 10:
+                break
+
+    if errors:
+        g.db.rollback()
+        flash_error('Upload aborted: ' + '; '.join(errors[:3]) + (f' … and {len(errors)-3} more' if len(errors) > 3 else ''))
+        return redirect(url_for('master_data.targets_limits'))
+
+    g.db.commit()
+    AuditLogger.log(AuditAction.UPDATE, 'FGCode', entity_id=None,
+                    after_value={'upload': f.filename, 'sheet': sheet, 'created': created,
+                                 'updated': updated, 'skipped': skipped},
+                    module='master_data')
+    flash_success(f'Targets & Limits uploaded: {created} created, {updated} updated, {skipped} skipped')
+    return redirect(url_for('master_data.targets_limits'))
+
 
 @bp.route('/targets-limits')
 @require_auth
