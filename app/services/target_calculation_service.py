@@ -13,12 +13,20 @@ Formulas:
 
   Total Nicotine    = (Total × 100) / ((1 − Filtration/100) × 100)
   W_dry  (mg)       = Total_Nicotine / (N_BLD / 100)   [N_BLD is in %]
-  W_tob  (mg)       = (100 / (100 − M_IP)) × W_dry
+  W_tob  (mg)       = (100 / (100 − M_IP)) × W_dry ÷ tobacco_constant
   W_cig  (mg)       = W_tob + W_NTM
   TW     (mg)       = W_cig  (synonym)
+
+  tobacco_constant is the real-tobacco density factor from the legacy
+  Production Data history (col CM). Per the cell-trace spec, when an FG has no
+  own production record it falls back to the global last value 0.99620799.
 """
 import math
 from typing import Dict, Any
+
+# Global fallback tobacco constant (legacy global-last record). Overridable
+# per calc via fg_info['tobacco_constant'] once per-SKU history exists.
+DEFAULT_TOBACCO_CONSTANT = 0.99620799
 
 
 class TargetCalculationService:
@@ -61,6 +69,9 @@ class TargetCalculationService:
         fg_info = fg_info or {}
         c_plg = float(fg_info.get('c_plg', 1))
         ntm_wt_mean = float(fg_info.get('ntm_wt_mean', 0))
+        tobacco_constant = float(fg_info.get('tobacco_constant') or DEFAULT_TOBACCO_CONSTANT)
+        if tobacco_constant <= 0:
+            tobacco_constant = 1.0
 
         # Guard against zero c_plg
         if c_plg == 0:
@@ -120,6 +131,9 @@ class TargetCalculationService:
             w_tob = w_dry
         else:
             w_tob = (100 / (100 - m_ip)) * w_dry
+        # Real-tobacco density adjustment (legacy divides moist weight by the
+        # tobacco constant). See cell-trace spec §4/§5.
+        w_tob = w_tob / tobacco_constant
 
         w_ntm = ntm_wt_mean
         w_cig = w_tob + w_ntm

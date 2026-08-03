@@ -44,14 +44,26 @@
                         <th>Run At</th>
                         <td>{{ run.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     </tr>
+                    {% if result and result.stage %}
+                    <tr>
+                        <th>Target W_CIG</th>
+                        <td>{{ "%.3f"|format(result.target_wcig or 0) }} mg
+                            <span class="text-muted">(from {{ "%.3f"|format(result.base_cigarette_weight or 0) }} mg)</span></td>
+                    </tr>
+                    <tr>
+                        <th>Stage reached</th>
+                        <td><span class="badge bg-secondary">Stage {{ result.stage }}</span></td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <th>Status</th>
                         <td>
                             {% if result and result.within_tolerance %}
-                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Within Tolerance</span>
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i>
+                                {{ 'Target reached' if result.stage else 'Within Tolerance' }}</span>
                             {% else %}
-                            <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Outside
-                                Tolerance</span>
+                            <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i>
+                                {{ 'Target unreachable within limits' if result.stage else 'Outside Tolerance' }}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -67,14 +79,14 @@
                 <div class="row text-center">
                     <div class="col-4">
                         <div class="kpi-card p-2">
-                            <div class="kpi-value">{{ "%.4f"|format(result.optimized_cigarette_weight or 0) }}</div>
-                            <div class="kpi-label">Cigarette Wt (g)</div>
+                            <div class="kpi-value">{{ "%.3f"|format(result.optimized_cigarette_weight or 0) }}</div>
+                            <div class="kpi-label">Cigarette Wt (mg)</div>
                         </div>
                     </div>
                     <div class="col-4">
                         <div class="kpi-card p-2">
-                            <div class="kpi-value">{{ "%.4f"|format(result.optimized_tobacco_weight or 0) }}</div>
-                            <div class="kpi-label">Tobacco Wt (g)</div>
+                            <div class="kpi-value">{{ "%.3f"|format(result.optimized_tobacco_weight or 0) }}</div>
+                            <div class="kpi-label">Tobacco Wt (mg)</div>
                         </div>
                     </div>
                     <div class="col-4">

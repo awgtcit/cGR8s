@@ -15,6 +15,39 @@ from app.audit import AuditLogger
 bp = Blueprint('npl', __name__, template_folder='templates')
 
 
+def _npl_reference(po):
+    """Resolve the non-form inputs for an NPL calc (key vars, calibration, w_tob)
+    from the PO's stored key-variable + target-weight snapshots. Reused by the
+    calculate page and the Formula panel so both compute over identical inputs."""
+    tw_repo = TargetWeightResultRepository(g.db)
+    tw_results = tw_repo.get_all(filters={'process_order_id': po.id})
+    tw = tw_results[-1] if tw_results else None
+    kv = KeyVariableRepository(g.db).get_by_process_order(po.id)
+    fg = FGCodeRepository(g.db).get_by_id(po.fg_code_id) if po.fg_code_id else None
+    ref = {
+        'n_bld': float(kv.n_bld or 0) if kv else 0, 'p_cu': float(kv.p_cu or 0) if kv else 0,
+        't_vnt': float(kv.t_vnt or 0) if kv else 0, 'f_pd': float(kv.f_pd or 0) if kv else 0,
+        'm_ip': float(kv.m_ip or 0) if kv else 0, 'alpha': float(kv.alpha or 0) if kv else 0,
+        'beta': float(kv.beta or 0) if kv else 0, 'gamma': float(kv.gamma or 0) if kv else 0,
+        'delta': float(kv.delta or 0) if kv else 0, 'n_tgt': float(kv.n_tgt or 0) if kv else 0,
+        'c_plg': int(fg.c_plg or 1) if fg and fg.c_plg else 1,
+        'w_tob': float(tw.w_tob or 0) if tw else 0,
+        'w_ntm': float(tw.w_ntm or 0) if tw else 0,
+        'w_cig': float(tw.w_cig or 0) if tw else 0,
+    }
+    return fg, tw, kv, ref
+
+
+def _npl_raw(ref, form):
+    """Merge NPL form inputs with the reference inputs into the flat dict the
+    formula engine expects (c_plg -> n_c)."""
+    return {**{k: v for k, v in form.items() if k != 't_usd'},
+            'n_bld': ref['n_bld'], 'p_cu': ref['p_cu'], 't_vnt': ref['t_vnt'],
+            'f_pd': ref['f_pd'], 'm_ip': ref['m_ip'], 'alpha': ref['alpha'],
+            'beta': ref['beta'], 'gamma': ref['gamma'], 'delta': ref['delta'],
+            'n_tgt': ref['n_tgt'], 'n_c': ref['c_plg'], 'w_tob': ref['w_tob']}
+
+
 @bp.route('/')
 @require_auth
 @require_permission(Permissions.NPL_VIEW)
@@ -39,42 +72,13 @@ def calculate(process_order_id):
         from app.utils.errors import NotFoundError
         raise NotFoundError('Process Order', process_order_id)
 
-    # Get target weight result for this PO
-    tw_repo = TargetWeightResultRepository(g.db)
-    tw_results = tw_repo.get_all(filters={'process_order_id': process_order_id})
-    tw = tw_results[-1] if tw_results else None
-
-    # Get key variables (calibration constants snapshot)
-    kv_repo = KeyVariableRepository(g.db)
-    kv = kv_repo.get_by_process_order(process_order_id)
-
-    # Get FG code for c_plg
-    fg_repo = FGCodeRepository(g.db)
-    fg = fg_repo.get_by_id(po.fg_code_id) if po.fg_code_id else None
+    fg, tw, kv, ref = _npl_reference(po)
 
     # Get existing NPL input/result for this PO (for update-not-duplicate)
     npl_in_repo = NPLInputRepository(g.db)
     npl_res_repo = NPLResultRepository(g.db)
     existing_input = npl_in_repo.get_by_process_order(process_order_id)
     existing_result = npl_res_repo.get_by_process_order(process_order_id)
-
-    # Build reference data for template
-    ref = {
-        'n_bld': float(kv.n_bld or 0) if kv else 0,
-        'p_cu': float(kv.p_cu or 0) if kv else 0,
-        't_vnt': float(kv.t_vnt or 0) if kv else 0,
-        'f_pd': float(kv.f_pd or 0) if kv else 0,
-        'm_ip': float(kv.m_ip or 0) if kv else 0,
-        'alpha': float(kv.alpha or 0) if kv else 0,
-        'beta': float(kv.beta or 0) if kv else 0,
-        'gamma': float(kv.gamma or 0) if kv else 0,
-        'delta': float(kv.delta or 0) if kv else 0,
-        'n_tgt': float(kv.n_tgt or 0) if kv else 0,
-        'c_plg': int(fg.c_plg or 1) if fg and fg.c_plg else 1,
-        'w_tob': float(tw.w_tob or 0) if tw else 0,
-        'w_ntm': float(tw.w_ntm or 0) if tw else 0,
-        'w_cig': float(tw.w_cig or 0) if tw else 0,
-    }
 
     if request.method == 'POST':
         data = request.form.to_dict()
@@ -135,29 +139,17 @@ def calculate(process_order_id):
             )
             npl_in_repo.create(npl_input_entity)
 
-        # Build calculator input (exclude t_usd – calculator computes it)
-        calc_form = {k: v for k, v in npl_form.items() if k != 't_usd'}
-        npl_input = NPLInput(
-            # Form inputs
-            **calc_form,
-            # Key variables from TW
-            n_bld=ref['n_bld'],
-            p_cu=ref['p_cu'],
-            t_vnt=ref['t_vnt'],
-            f_pd=ref['f_pd'],
-            m_ip=ref['m_ip'],
-            # Calibration constants
-            alpha=ref['alpha'],
-            beta=ref['beta'],
-            gamma_val=ref['gamma'],
-            delta=ref['delta'],
-            n_tgt=ref['n_tgt'],
-            # FG info
-            n_c=ref['c_plg'],
-            w_tob=ref['w_tob'],
+        # Config-driven engine (stored NPL formulas; falls back to defaults).
+        # Reproduces NPLCalculator until a formula is edited.
+        from app.services import formula_service
+        from app.services.npl_calc import NPLResult
+        fx = formula_service.compute(g.db, 'npl', _npl_raw(ref, npl_form))
+        o, itm = fx['output_data'], fx['interim_output']
+        npl_result = NPLResult(
+            npl_pct=o['npl_pct'], npl_kg=o['npl_kg'], tac=o['tac'], ttc=o['ttc'],
+            t_usd=itm.get('t_usd', 0), actual_consumption=itm.get('actual', 0),
+            theoretical_consumption=itm.get('theoretical', 0),
         )
-        calc = NPLCalculator()
-        npl_result = calc.calculate(npl_input)
 
         # Update existing or create new NPL result
         if existing_result:
@@ -231,6 +223,57 @@ def calculate(process_order_id):
     return render_template('npl/calculate.html',
                            po=po, fg=fg, tw=tw, ref=ref, data=data,
                            errors=[], npl_result=existing_result)
+
+
+@bp.route('/api/formula/<process_order_id>', methods=['POST'])
+@require_auth
+@require_permission(Permissions.NPL_CALCULATE)
+def api_formula_breakdown(process_order_id):
+    """NPL Formula panel: inputs (value+source), step-by-step derivation, results,
+    computed over the on-screen form values + this PO's reference inputs."""
+    po = ProcessOrderRepository(g.db).get_by_id(process_order_id)
+    if not po:
+        return jsonify({'error': 'Process order not found'}), 404
+    _fg, _tw, _kv, ref = _npl_reference(po)
+
+    data = request.get_json() or {}
+    form = data.get('form') or {}
+    def fv(k):
+        try:
+            return float(form.get(k) or 0)
+        except (TypeError, ValueError):
+            return 0.0
+    fields = ['t_iss', 't_un', 'l_dst', 'l_win', 'l_flr', 'l_srt', 'l_dt',
+              'n_mc', 'n_cg', 'r_mkg', 'r_ndt', 'r_pkg', 'm_dsp', 'm_dst', 'n_w']
+    npl_form = {k: fv(k) for k in fields}
+
+    from app.services import formula_service
+    from app.auth.context import has_permission
+    result = formula_service.compute(g.db, 'npl', _npl_raw(ref, npl_form))
+    result['can_edit'] = has_permission(Permissions.MASTER_DATA_FORMULA_CONSTANTS.value)
+    return jsonify(result)
+
+
+@bp.route('/api/formula/save', methods=['POST'])
+@require_auth
+@require_permission(Permissions.MASTER_DATA_FORMULA_CONSTANTS)
+def api_formula_save():
+    """Save edited NPL formula expressions (permission-gated, safe-validated)."""
+    from app.services import formula_service
+    from app.services.formula_engine import FormulaError
+    from app.auth.context import get_current_user_email
+    data = request.get_json() or {}
+    edits = data.get('edits') or {}
+    if not isinstance(edits, dict) or not edits:
+        return jsonify({'error': 'No formula edits provided'}), 400
+    try:
+        formula_service.validate_and_save(g.db, 'npl', edits, user=get_current_user_email())
+    except FormulaError as e:
+        return jsonify({'error': f'Invalid formula: {e}'}), 400
+    g.db.commit()
+    AuditLogger.log(AuditAction.UPDATE, 'FormulaDefinition', entity_id=None,
+                    after_value={'module': 'npl', 'edited': list(edits.keys())}, module='npl')
+    return jsonify({'success': True, 'edited': list(edits.keys())})
 
 
 @bp.route('/verify/<process_order_id>', methods=['POST'])

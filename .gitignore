@@ -65,3 +65,11 @@ migrations/versions/__pycache__/
 .github/skills/
 .github/instructions/kluster-code-verify.instructions.md
 AGENTS.md
+
+# Local production data workbooks (loaded into the DB, not source)
+/Data.xlsx
+/cGr8s.xlsm
+# DB logical backups (scripts/backup_db.py)
+/backups/
+# Pulse task-tracking state
+/.pulse/

@@ -150,11 +150,14 @@ class KeyVariablePopulator:
         if cal and cal.n_tgt is not None:
             return float(cal.n_tgt)
 
-        # Priority 2: SKU.nicotine via cig_code
-        if fg.cig_code:
+        # Priority 2: SKU.nicotine keyed by SKU code == FG code.
+        # The Data.xlsx SKU block (and nicotine_sync) key nicotine by the FG/SKU
+        # code, not cig_code — several SKUs can share one cig_code with different
+        # nicotine, so a cig_code match is nondeterministic and wrong.
+        if fg.fg_code:
             from app.models.sku import SKU
             sku = self.session.query(SKU).filter(
-                SKU.cig_code == fg.cig_code,
+                SKU.sku_code == fg.fg_code,
                 SKU.is_active == True,
                 SKU.is_deleted == False,  # noqa: E712
             ).first()

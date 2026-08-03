@@ -645,11 +645,9 @@
                     </div>
                 </div>
                 <div class="quick-actions">
-                    {% if has_perm('NPL.CALCULATE') %}
-                    <button type="button" id="nplBtn" class="quick-action-btn" disabled>
-                        <i class="bi bi-graph-down me-1"></i>NPL
+                    <button type="button" id="formulaBtn" class="quick-action-btn" disabled>
+                        <i class="bi bi-braces me-1"></i>Formula
                     </button>
-                    {% endif %}
                     {% if has_perm('OPTIMIZER.RUN') %}
                     <button type="button" id="optimizerBtn" class="quick-action-btn" disabled>
                         <i class="bi bi-graph-up-arrow me-1"></i>Optimizer
@@ -1059,7 +1057,7 @@
         }
 
         function enableControls() {
-            $('#calculateBtn, #nplBtn, #optimizerBtn').prop('disabled', false);
+            $('#calculateBtn, #formulaBtn, #optimizerBtn').prop('disabled', false);
         }
 
         // ── Tab switching ─────────────────────────────────
@@ -1071,7 +1069,8 @@
         });
 
         // ── Calculate ─────────────────────────────────────
-        $('#calculateBtn').click(function () {
+        // Shared payload from the current on-screen values (Calculate + Formula)
+        function gatherCalcPayload() {
             const kv = {
                 n_bld: parseFloat($('#n_bld').val()) || 0,
                 p_cu: parseFloat($('#p_cu').val()) || 0,
@@ -1084,14 +1083,17 @@
                 ntm_wt_mean: parseFloat($('#w_ntm').val()) || 0,
                 c_plg: skuDetails && skuDetails.physical_params ? parseInt(skuDetails.physical_params.c_plg) || 1 : 1
             };
+            return { key_variables: kv, calibration: cal, fg_info: fgInfo };
+        }
 
+        $('#calculateBtn').click(function () {
             $('#resultsContent').html('<div class="empty-state" style="min-height:220px"><div class="spinner-sm"></div><p class="mt-2">Calculating…</p></div>');
 
             $.ajax({
                 url: '{{ url_for("fg_codes.api_calculate_target") }}',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ key_variables: kv, calibration: cal, fg_info: fgInfo }),
+                data: JSON.stringify(gatherCalcPayload()),
                 success: function (data) {
                     lastCalcResults = data;
                     renderResults(data);
@@ -1152,8 +1154,83 @@
         let lastCalcResults = null;
 
         // ── Navigation buttons ────────────────────────────
-        $('#nplBtn').click(function () { window.location.href = '{{ url_for("npl.index") }}'; });
         $('#optimizerBtn').click(function () { window.location.href = '{{ url_for("optimizer.index") }}'; });
+
+        // ── Formula panel ─────────────────────────────────
+        function fmtNum(v) { return (v === null || v === undefined) ? '—' : (Math.round(v * 10000) / 10000); }
+
+        function renderFormula(d) {
+            const canEdit = !!d.can_edit;
+            let inp = '<div class="fx-section-title">Inputs used &amp; where they come from</div>'
+                + '<div class="table-responsive"><table class="table table-sm fx-table"><thead><tr>'
+                + '<th>Variable</th><th class="text-end">Value</th><th>Source</th></tr></thead><tbody>';
+            d.inputs.forEach(function (i) {
+                inp += '<tr><td><code>' + i.var + '</code> <span class="text-muted">' + (i.label || '') + '</span></td>'
+                    + '<td class="text-end">' + fmtNum(i.value) + '</td>'
+                    + '<td class="text-muted small">' + (i.source || '') + '</td></tr>';
+            });
+            inp += '</tbody></table></div>';
+
+            let stp = '<div class="fx-section-title mt-3">Calculation — step by step</div>'
+                + '<div class="table-responsive"><table class="table table-sm fx-table"><thead><tr>'
+                + '<th style="width:22%">Result</th><th style="width:40%">Formula</th>'
+                + '<th style="width:26%">Substituted</th><th class="text-end">Value</th></tr></thead><tbody>';
+            d.steps.forEach(function (s) {
+                const exprCell = canEdit
+                    ? '<input type="text" class="form-control form-control-sm fx-expr" data-code="' + s.code + '" value="' + s.expression.replace(/"/g, '&quot;') + '">'
+                    : '<code>' + s.expression + '</code>';
+                stp += '<tr><td><strong>' + s.name + '</strong><br><code class="text-muted">' + s.code + '</code></td>'
+                    + '<td>' + exprCell + '</td>'
+                    + '<td class="text-muted small">' + (s.substituted || '') + '</td>'
+                    + '<td class="text-end fx-val" data-code="' + s.code + '">' + fmtNum(s.value)
+                    + (s.error ? ' <span class="text-danger" title="' + s.error + '">!</span>' : '') + '</td></tr>';
+            });
+            stp += '</tbody></table></div>';
+
+            $('#formulaBody').html(inp + stp);
+            $('#formulaSaveBtn').toggle(canEdit);
+            $('#formulaHint').toggle(canEdit);
+        }
+
+        function loadFormula() {
+            $('#formulaBody').html('<div class="empty-state" style="min-height:160px"><div class="spinner-sm"></div><p class="mt-2">Loading formulas…</p></div>');
+            $('#formulaStatus').text('');
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_formula_breakdown") }}',
+                method: 'POST', contentType: 'application/json',
+                data: JSON.stringify(gatherCalcPayload()),
+                success: renderFormula,
+                error: function () { $('#formulaBody').html('<div class="text-danger p-3">Failed to load formulas.</div>'); }
+            });
+        }
+
+        $('#formulaBtn').click(function () {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('formulaModal')).show();
+            loadFormula();
+        });
+
+        $('#formulaSaveBtn').click(function () {
+            const edits = {};
+            $('.fx-expr').each(function () { edits[$(this).data('code')] = $(this).val().trim(); });
+            const btn = $(this).prop('disabled', true);
+            $('#formulaStatus').removeClass('text-danger text-success').text('Saving…');
+            $.ajax({
+                url: '{{ url_for("fg_codes.api_formula_save") }}',
+                method: 'POST', contentType: 'application/json',
+                headers: { 'X-CSRFToken': csrfToken },
+                data: JSON.stringify({ edits: edits }),
+                success: function () {
+                    $('#formulaStatus').addClass('text-success').text('Saved. Recalculating…');
+                    loadFormula();                 // refresh breakdown with new formulas
+                    $('#calculateBtn').click();    // recompute main results
+                },
+                error: function (xhr) {
+                    const msg = (xhr.responseJSON && xhr.responseJSON.error) || 'Save failed';
+                    $('#formulaStatus').addClass('text-danger').text(msg);
+                },
+                complete: function () { btn.prop('disabled', false); }
+            });
+        });
 
         // ── Inline PO Save ────────────────────────────────
         let savedPOId = null;
@@ -1210,6 +1287,37 @@
         });
     });
 </script>
+
+<!-- Formula panel modal -->
+<style>
+    .fx-section-title { font-weight: 600; color: var(--cgr-primary); font-size: 0.9rem; margin-bottom: .4rem; }
+    .fx-table th { font-size: .78rem; text-transform: uppercase; color: #6b7280; }
+    .fx-table td, .fx-table th { vertical-align: middle; }
+    .fx-expr { font-family: monospace; font-size: .82rem; }
+    #formulaModal .modal-dialog { max-width: 1100px; }
+</style>
+<div class="modal fade" id="formulaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--cgr-primary);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-braces me-1"></i> Target Weight — Formula &amp; Derivation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="formulaBody"></div>
+            <div class="modal-footer">
+                <span id="formulaHint" class="text-muted small me-auto" style="display:none;">
+                    <i class="bi bi-info-circle me-1"></i>Edit an expression and Save. Allowed: <code>+ - * / ** ( )</code>,
+                    functions <code>exp, log, sqrt, min, max, abs</code>, and the variables/earlier results shown above.
+                </span>
+                <span id="formulaStatus" class="small me-2"></span>
+                <button type="button" class="btn btn-primary btn-sm" id="formulaSaveBtn" style="display:none;">
+                    <i class="bi bi-save me-1"></i>Save Formulas
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Missing monthly blend nicotine modal -->
 <div class="modal fade" id="nicMissingModal" tabindex="-1" aria-hidden="true">

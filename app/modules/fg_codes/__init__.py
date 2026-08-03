@@ -59,57 +59,118 @@ def api_load_codes():
     return jsonify(result)
 
 
-def _mtc_connect():
+# External production databases queried for "which FG codes ran on a date".
+# All share the tabfinishgoods + brands schema. ps_utc / ps_specialtobacco
+# default to the MTC server + credentials (same host, different database);
+# override per source with PS_UTC_DB_* / PS_SPECIALTOBACCO_DB_* if they live
+# elsewhere. Sources that are unreachable are skipped (results are unioned).
+def _prod_sources():
+    mtc_server = os.getenv('MTC_DB_SERVER', '162.20.20.250')
+    mtc_user = os.getenv('MTC_DB_USER', '')
+    mtc_pwd = os.getenv('MTC_DB_PASSWORD', '')
+    return [
+        {
+            'label': 'mtc',
+            'server': mtc_server,
+            'database': os.getenv('MTC_DB_NAME', 'mtc'),
+            'uid': mtc_user, 'pwd': mtc_pwd,
+        },
+        {
+            'label': 'ps_utc',
+            'server': os.getenv('PS_UTC_DB_SERVER', mtc_server),
+            'database': os.getenv('PS_UTC_DB_NAME', 'ps_utc'),
+            'uid': os.getenv('PS_UTC_DB_USER', mtc_user),
+            'pwd': os.getenv('PS_UTC_DB_PASSWORD', mtc_pwd),
+        },
+        {
+            'label': 'ps_specialtobacco',
+            'server': os.getenv('PS_SPECIALTOBACCO_DB_SERVER', mtc_server),
+            'database': os.getenv('PS_SPECIALTOBACCO_DB_NAME', 'ps_specialtobacco'),
+            'uid': os.getenv('PS_SPECIALTOBACCO_DB_USER', mtc_user),
+            'pwd': os.getenv('PS_SPECIALTOBACCO_DB_PASSWORD', mtc_pwd),
+        },
+    ]
+
+
+def _prod_connect(src):
     import pyodbc
     conn_str = (
         "DRIVER={ODBC Driver 17 for SQL Server};"
-        f"SERVER={os.getenv('MTC_DB_SERVER', '162.20.20.250')};"
-        f"DATABASE={os.getenv('MTC_DB_NAME', 'mtc')};"
-        f"UID={os.getenv('MTC_DB_USER', '')};"
-        f"PWD={os.getenv('MTC_DB_PASSWORD', '')};"
-        "TrustServerCertificate=yes;"
+        f"SERVER={src['server']};DATABASE={src['database']};"
+        f"UID={src['uid']};PWD={src['pwd']};TrustServerCertificate=yes;"
     )
     return pyodbc.connect(conn_str, timeout=5)
 
 
+def _mtc_connect():
+    """Back-compat: a connection to the primary (MTC) source."""
+    return _prod_connect(_prod_sources()[0])
+
+
 def _fetch_mtc_brandcodes(date_str):
-    """Query the external MTC production DB for brandcodes produced on a date."""
-    with _mtc_connect() as cn:
-        cur = cn.cursor()
-        cur.execute(
-            """SELECT brands.brandcode
-               FROM tabfinishgoods
-               INNER JOIN brands ON tabfinishgoods.brandid = brands.id
-               WHERE tabfinishgoods.date = ? AND brands.brandcode <> '00000000.00'
-               ORDER BY tabfinishgoods.id DESC""",
-            date_str,
-        )
-        seen, codes = set(), []
-        for (bc,) in cur.fetchall():
-            bc = (bc or '').strip()
-            if bc and bc not in seen:
-                seen.add(bc)
-                codes.append(bc)
-        return codes
+    """Brandcodes produced on a date, unioned across all production sources
+    (mtc + ps_utc + ps_specialtobacco). Unreachable sources are skipped; raises
+    only if EVERY source fails."""
+    import logging
+    log = logging.getLogger(__name__)
+    seen, codes, errors, ok = set(), [], [], 0
+    for src in _prod_sources():
+        try:
+            with _prod_connect(src) as cn:
+                cur = cn.cursor()
+                cur.execute(
+                    """SELECT brands.brandcode
+                       FROM tabfinishgoods
+                       INNER JOIN brands ON tabfinishgoods.brandid = brands.id
+                       WHERE tabfinishgoods.date = ? AND brands.brandcode <> '00000000.00'
+                       ORDER BY tabfinishgoods.id DESC""",
+                    date_str,
+                )
+                ok += 1
+                for (bc,) in cur.fetchall():
+                    bc = (bc or '').strip()
+                    if bc and bc not in seen:
+                        seen.add(bc)
+                        codes.append(bc)
+        except Exception as e:  # skip a down source, keep the others
+            errors.append(f"{src['label']}: {e}")
+            log.warning('Production source %s unreachable: %s', src['label'], e)
+    if ok == 0:
+        raise RuntimeError('; '.join(errors) or 'no production sources configured')
+    return codes
 
 
 def fetch_mtc_month_brandcode_dates(year, month):
-    """{brandcode: last production date 'YYYY-MM-DD'} for a month (external MTC DB)."""
+    """{brandcode: last production date 'YYYY-MM-DD'} for a month, merged across
+    all production sources (max date per brandcode). Unreachable sources skipped."""
+    import logging
+    log = logging.getLogger(__name__)
     start = f'{year:04d}-{month:02d}-01'
     end = f'{year + 1:04d}-01-01' if month == 12 else f'{year:04d}-{month + 1:02d}-01'
-    with _mtc_connect() as cn:
-        cur = cn.cursor()
-        cur.execute(
-            """SELECT brands.brandcode, MAX(tabfinishgoods.date)
-               FROM tabfinishgoods
-               INNER JOIN brands ON tabfinishgoods.brandid = brands.id
-               WHERE tabfinishgoods.date >= ? AND tabfinishgoods.date < ?
-                 AND brands.brandcode <> '00000000.00'
-               GROUP BY brands.brandcode""",
-            start, end,
-        )
-        return {(bc or '').strip(): str(d)[:10]
-                for bc, d in cur.fetchall() if (bc or '').strip() and d}
+    merged = {}
+    for src in _prod_sources():
+        try:
+            with _prod_connect(src) as cn:
+                cur = cn.cursor()
+                cur.execute(
+                    """SELECT brands.brandcode, MAX(tabfinishgoods.date)
+                       FROM tabfinishgoods
+                       INNER JOIN brands ON tabfinishgoods.brandid = brands.id
+                       WHERE tabfinishgoods.date >= ? AND tabfinishgoods.date < ?
+                         AND brands.brandcode <> '00000000.00'
+                       GROUP BY brands.brandcode""",
+                    start, end,
+                )
+                for bc, d in cur.fetchall():
+                    bc = (bc or '').strip()
+                    if not bc or not d:
+                        continue
+                    ds = str(d)[:10]
+                    if bc not in merged or ds > merged[bc]:  # keep the latest date
+                        merged[bc] = ds
+        except Exception as e:
+            log.warning('Production source %s unreachable: %s', src['label'], e)
+    return merged
 
 
 @bp.route('/api/codes-by-date')
@@ -126,7 +187,7 @@ def api_codes_by_date():
     try:
         brandcodes = _fetch_mtc_brandcodes(date_str)
     except Exception as e:
-        return jsonify({'error': f'MTC database unreachable: {e}'}), 502
+        return jsonify({'error': f'Production databases unreachable: {e}'}), 502
 
     repo = FGCodeRepository(g.db)
     codes, missing = [], []
@@ -236,7 +297,8 @@ def api_sku_details(fg_code):
             'filter_length': fg.filter_length,
             'plug_length': fg.plug_length,
             'cig_code': fg.cig_code,
-            'c_plg': fg.c_plg
+            'c_plg': fg.c_plg,
+            'tobacco_constant': get_tobacco_constant(),
         },
         'targets': {
             'family_name': fg.family_name,
@@ -309,6 +371,8 @@ def api_calculate_target():
     key_vars = data.get('key_variables', {})
     calibration = data.get('calibration', {})
     fg_info = data.get('fg_info', {})
+    # Server authoritative: never trust a client-sent tobacco constant
+    fg_info['tobacco_constant'] = get_tobacco_constant()
 
     # Validate input data
     if not TargetCalculationService.validate_key_variables(key_vars):
@@ -317,10 +381,57 @@ def api_calculate_target():
     if not TargetCalculationService.validate_calibration_constants(calibration):
         return jsonify({'error': 'Invalid calibration constants'}), 400
 
-    # Perform forward target calculation using service
-    result = TargetCalculationService.calculate_forward_target(key_vars, calibration, fg_info)
+    # Config-driven engine (stored formulas; falls back to built-in defaults).
+    # Reproduces TargetCalculationService exactly until a formula is edited.
+    from app.services import formula_service
+    result = formula_service.compute(g.db, 'target_weight',
+                                     {**key_vars, **calibration, **fg_info})
+    # keep the calc response lean; the Formula panel fetches steps/inputs separately
+    return jsonify({'interim_output': result['interim_output'],
+                    'output_data': result['output_data']})
 
+
+@bp.route('/api/formula/target-weight', methods=['POST'])
+@require_auth
+@require_permission(Permissions.TARGET_WEIGHT_CALCULATE)
+def api_formula_breakdown():
+    """Formula panel: inputs (value+source), step-by-step derivation, results.
+    Uses the same on-screen values the Calculate button sends."""
+    data = request.get_json() or {}
+    key_vars = data.get('key_variables', {})
+    calibration = data.get('calibration', {})
+    fg_info = data.get('fg_info', {})
+    fg_info['tobacco_constant'] = get_tobacco_constant()
+
+    from app.services import formula_service
+    from app.auth.context import has_permission
+    result = formula_service.compute(g.db, 'target_weight',
+                                     {**key_vars, **calibration, **fg_info})
+    result['can_edit'] = has_permission(Permissions.MASTER_DATA_FORMULA_CONSTANTS.value)
     return jsonify(result)
+
+
+@bp.route('/api/formula/target-weight/save', methods=['POST'])
+@require_auth
+@require_permission(Permissions.MASTER_DATA_FORMULA_CONSTANTS)
+def api_formula_save():
+    """Save edited formula expressions (permission-gated, safe-validated)."""
+    from app.services import formula_service
+    from app.services.formula_engine import FormulaError
+    data = request.get_json() or {}
+    edits = data.get('edits') or {}
+    if not isinstance(edits, dict) or not edits:
+        return jsonify({'error': 'No formula edits provided'}), 400
+    from app.auth.context import get_current_user_email
+    try:
+        formula_service.validate_and_save(g.db, 'target_weight', edits,
+                                          user=get_current_user_email())
+    except FormulaError as e:
+        return jsonify({'error': f'Invalid formula: {e}'}), 400
+    g.db.commit()
+    AuditLogger.log(AuditAction.UPDATE, 'FormulaDefinition', entity_id=None,
+                    after_value={'edited': list(edits.keys())}, module='fg_codes')
+    return jsonify({'success': True, 'edited': list(edits.keys())})
 
 
 @bp.route('/api/update-n-target', methods=['POST'])
@@ -432,6 +543,25 @@ def api_create_process_order():
                     entity_id=po.id, after_value=po_data, module='fg_codes')
 
     return jsonify({'success': True, 'process_order_id': po.id})
+
+
+def get_tobacco_constant():
+    """Global tobacco constant used to divide W_TOB (real-tobacco density factor).
+
+    Reads system_config key 'tobacco_constant' when present, else the engine
+    default (legacy global-last record). See target_calculation_service §4/§5.
+    """
+    from app.services.target_calculation_service import DEFAULT_TOBACCO_CONSTANT
+    from app.models.system_config import SystemConfig
+    row = g.db.query(SystemConfig).filter(
+        SystemConfig.config_key == 'tobacco_constant'
+    ).first()
+    if row and row.config_value:
+        try:
+            return float(row.config_value)
+        except (ValueError, TypeError):
+            pass
+    return DEFAULT_TOBACCO_CONSTANT
 
 
 def get_key_variables(fg_code, process_date=None):

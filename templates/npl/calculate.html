@@ -217,8 +217,17 @@
     .npl-actions {
         grid-column: 1 / -1;
         display: flex;
+        align-items: center;
         justify-content: flex-end;
+        gap: 8px;
         padding-top: 4px;
+    }
+    /* the macro's .form-actions carries footer spacing (margin/padding/border-top)
+       that pushes Cancel/Calculate down; neutralise it so all 3 buttons align */
+    .npl-actions .form-actions {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
     }
 
     /* ── Responsive ────────────────────────────────────── */
@@ -466,10 +475,44 @@
 
         {# ── Action bar ───────────────────────────────────── #}
         <div class="npl-actions">
+            <button type="button" class="btn btn-success" id="nplFormulaBtn">
+                <i class="bi bi-braces me-1"></i>Formula
+            </button>
             {{ form_actions(url_for('npl.index'), 'Calculate NPL', 'bi-calculator') }}
         </div>
     </div>
 </form>
+
+<!-- NPL Formula panel modal -->
+<style>
+    .fx-section-title { font-weight: 600; color: var(--cgr-primary, #0d6b3c); font-size: 0.9rem; margin-bottom: .4rem; }
+    .fx-table th { font-size: .78rem; text-transform: uppercase; color: #6b7280; }
+    .fx-table td, .fx-table th { vertical-align: middle; }
+    .fx-expr { font-family: monospace; font-size: .82rem; }
+    #nplFormulaModal .modal-dialog { max-width: 1100px; }
+</style>
+<div class="modal fade" id="nplFormulaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--cgr-primary,#0d6b3c);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-braces me-1"></i> NPL — Formula &amp; Derivation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="nplFormulaBody"></div>
+            <div class="modal-footer">
+                <span id="nplFormulaHint" class="text-muted small me-auto" style="display:none;">
+                    <i class="bi bi-info-circle me-1"></i>Edit an expression and Save. Allowed: <code>+ - * / ** ( )</code>,
+                    functions <code>exp, log, sqrt, min, max, abs</code>, and the variables/earlier results shown above.
+                </span>
+                <span id="nplFormulaStatus" class="small me-2"></span>
+                <button type="button" class="btn btn-primary btn-sm" id="nplFormulaSaveBtn" style="display:none;">
+                    <i class="bi bi-save me-1"></i>Save Formulas
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -498,5 +541,85 @@
     document.querySelector('[name="l_dst"]')?.addEventListener('input', calcTusd);
     document.querySelector('[name="t_iss"]')?.addEventListener('input', calcTusd);
     calcTusd();
+
+    // ── NPL Formula panel ─────────────────────────────────
+    const NPL_FIELDS = ['t_iss', 't_un', 'l_dst', 'l_win', 'l_flr', 'l_srt', 'l_dt',
+        'n_mc', 'n_cg', 'r_mkg', 'r_ndt', 'r_pkg', 'm_dsp', 'm_dst', 'n_w'];
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+
+    function gatherNplForm() {
+        const f = {};
+        NPL_FIELDS.forEach(n => {
+            const el = document.querySelector('[name="' + n + '"]');
+            f[n] = el ? (parseFloat(el.value) || 0) : 0;
+        });
+        return f;
+    }
+    function fxNum(v) { return (v === null || v === undefined) ? '—' : (Math.round(v * 10000) / 10000); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+    function renderNplFormula(d) {
+        let inp = '<div class="fx-section-title">Inputs used &amp; where they come from</div>'
+            + '<div class="table-responsive"><table class="table table-sm fx-table"><thead><tr>'
+            + '<th>Variable</th><th class="text-end">Value</th><th>Source</th></tr></thead><tbody>';
+        d.inputs.forEach(i => {
+            inp += '<tr><td><code>' + i.var + '</code> <span class="text-muted">' + esc(i.label || '') + '</span></td>'
+                + '<td class="text-end">' + fxNum(i.value) + '</td>'
+                + '<td class="text-muted small">' + esc(i.source || '') + '</td></tr>';
+        });
+        inp += '</tbody></table></div>';
+
+        let stp = '<div class="fx-section-title mt-3">Calculation — step by step</div>'
+            + '<div class="table-responsive"><table class="table table-sm fx-table"><thead><tr>'
+            + '<th style="width:22%">Result</th><th style="width:40%">Formula</th>'
+            + '<th style="width:26%">Substituted</th><th class="text-end">Value</th></tr></thead><tbody>';
+        d.steps.forEach(s => {
+            const exprCell = d.can_edit
+                ? '<input type="text" class="form-control form-control-sm fx-expr" data-code="' + s.code + '" value="' + esc(s.expression) + '">'
+                : '<code>' + esc(s.expression) + '</code>';
+            stp += '<tr><td><strong>' + esc(s.name) + '</strong><br><code class="text-muted">' + s.code + '</code></td>'
+                + '<td>' + exprCell + '</td>'
+                + '<td class="text-muted small">' + esc(s.substituted || '') + '</td>'
+                + '<td class="text-end" data-val="' + s.code + '">' + fxNum(s.value)
+                + (s.error ? ' <span class="text-danger" title="' + esc(s.error) + '">!</span>' : '') + '</td></tr>';
+        });
+        stp += '</tbody></table></div>';
+
+        document.getElementById('nplFormulaBody').innerHTML = inp + stp;
+        document.getElementById('nplFormulaSaveBtn').style.display = d.can_edit ? '' : 'none';
+        document.getElementById('nplFormulaHint').style.display = d.can_edit ? '' : 'none';
+    }
+
+    function loadNplFormula() {
+        document.getElementById('nplFormulaBody').innerHTML =
+            '<div class="text-center text-muted p-4">Loading formulas…</div>';
+        document.getElementById('nplFormulaStatus').textContent = '';
+        fetch('{{ url_for("npl.api_formula_breakdown", process_order_id=po.id) }}', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ form: gatherNplForm() })
+        }).then(r => r.json()).then(renderNplFormula)
+            .catch(() => { document.getElementById('nplFormulaBody').innerHTML = '<div class="text-danger p-3">Failed to load formulas.</div>'; });
+    }
+
+    document.getElementById('nplFormulaBtn')?.addEventListener('click', () => {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('nplFormulaModal')).show();
+        loadNplFormula();
+    });
+
+    document.getElementById('nplFormulaSaveBtn')?.addEventListener('click', function () {
+        const edits = {};
+        document.querySelectorAll('#nplFormulaModal .fx-expr').forEach(el => { edits[el.dataset.code] = el.value.trim(); });
+        this.disabled = true;
+        const st = document.getElementById('nplFormulaStatus');
+        st.className = 'small me-2'; st.textContent = 'Saving…';
+        fetch('{{ url_for("npl.api_formula_save") }}', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ edits: edits })
+        }).then(r => r.json().then(j => ({ ok: r.ok, j }))).then(({ ok, j }) => {
+            if (ok) { st.className = 'small me-2 text-success'; st.textContent = 'Saved. Refreshing…'; loadNplFormula(); }
+            else { st.className = 'small me-2 text-danger'; st.textContent = j.error || 'Save failed'; }
+        }).catch(() => { st.className = 'small me-2 text-danger'; st.textContent = 'Save failed'; })
+            .finally(() => { this.disabled = false; });
+    });
 </script>
 {% endblock %}

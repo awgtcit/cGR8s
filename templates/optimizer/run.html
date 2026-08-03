@@ -53,15 +53,15 @@
         <div class="card">
             <div class="card-body">
                 <form method="post" action="{{ url_for('optimizer.run', process_order_id=po.id) }}"
-                    x-data="{ method: '{{ data.get('method', 'adjustment') }}' }">
+                    x-data="{ method: '{{ data.get('method', 'direct') }}' }">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <div class="mb-3">
                         <label class="form-label">Optimization Method</label>
                         <select name="method" class="form-select" x-model="method">
+                            <option value="direct">Target Weight (staged solve)</option>
                             <option value="adjustment">Adjustment (Delta)</option>
                             <option value="manual">Manual Entry</option>
-                            <option value="direct">Direct Input</option>
                         </select>
                     </div>
 
@@ -103,16 +103,17 @@
                         </div>
                     </div>
 
-                    <!-- Direct Method -->
+                    <!-- Direct / Target Weight (staged solver) -->
                     <div x-show="method === 'direct'">
-                        <h6>Direct Target Values</h6>
+                        <h6>Target Cigarette Weight</h6>
+                        <p class="text-muted small mb-2">
+                            Enter the target W_CIG (mg). The optimizer adjusts Tip Ventilation then
+                            Filter PD within the KP-tolerance stages (S1&rarr;S4, widening each stage)
+                            until the target is met, and reports the stage reached.
+                        </p>
                         <div class="row">
-                            <div class="col-md-4">{{ form_field('direct_n_bld', 'N_BLD', data.get('direct_n_bld', ''),
-                                type='number', step='0.0001', errors=errors) }}</div>
-                            <div class="col-md-4">{{ form_field('direct_p_cu', 'P_CU', data.get('direct_p_cu', ''),
-                                type='number', step='0.0001', errors=errors) }}</div>
-                            <div class="col-md-4">{{ form_field('direct_t_vnt', 'T_VNT', data.get('direct_t_vnt', ''),
-                                type='number', step='0.0001', errors=errors) }}</div>
+                            <div class="col-md-4">{{ form_field('direct_target_wcig', 'Target W_CIG (mg)',
+                                data.get('direct_target_wcig', ''), type='number', step='0.001', errors=errors) }}</div>
                         </div>
                     </div>
 
